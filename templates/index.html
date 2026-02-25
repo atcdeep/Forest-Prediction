@@ -1,0 +1,3339 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Data Analysis & Prediction System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        /* ===== GLOBAL STYLES ===== */
+        :root {
+            --primary: #4361ee;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #118ab2;
+            --purple: #9d4edd;
+            --orange: #ff7b00;
+            --dark: #212529;
+            --light: #f8f9fa;
+
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-element {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.7;
+            filter: blur(40px);
+            animation: float 15s infinite linear;
+        }
+
+        .bg-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #4361ee33 0%, transparent 70%);
+            top: 10%;
+            left: 5%;
+            animation-delay: 0s;
+        }
+
+        .bg-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #7209b733 0%, transparent 70%);
+            top: 60%;
+            right: 10%;
+            animation-delay: -5s;
+        }
+
+        .bg-3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, #06d6a033 0%, transparent 70%);
+            bottom: 20%;
+            left: 15%;
+            animation-delay: -8s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(30px, -40px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ===== HEADER WITH LOGOUT ===== */
+        .header {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 30px 40px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg,
+                    var(--primary),
+                    var(--secondary),
+                    var(--success),
+                    var(--warning));
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        .header-content h1 {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 8px;
+            font-size: 2.5em;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-content p {
+            color: #64748b;
+            font-size: 1em;
+            max-width: 500px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-details {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1em;
+        }
+
+        .user-email {
+            color: #64748b;
+            font-size: 0.9em;
+        }
+
+        .logout-btn {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(239, 71, 111, 0.2);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 71, 111, 0.3);
+        }
+
+        .logout-btn i {
+            font-size: 1.2em;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        /* ===== DASHBOARD LAYOUT ===== */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 4px 0 0 4px;
+        }
+
+        .card h3 {
+            color: var(--primary);
+            margin-bottom: 25px;
+            font-size: 1.5em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card h3 i {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        /* ===== FORM ELEMENTS ===== */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select,
+        input {
+            width: 100%;
+            padding: 16px 20px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            color: #334155;
+            transition: all 0.3s ease;
+            appearance: none;
+        }
+
+        select:focus,
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234361ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 20px center;
+            background-size: 20px;
+            padding-right: 50px;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 18px 36px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning), #ff7b00);
+        }
+
+        /* ===== FILE UPLOAD ===== */
+        .file-upload {
+            background: white;
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .file-upload:hover {
+            border-color: var(--primary);
+            background: #f8f9ff;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .file-upload label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+        }
+
+        .file-upload i {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* ===== CHARTS CONTAINER ===== */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            height: 400px;
+            position: relative;
+        }
+
+        .chart-wrapper {
+            height: 280px;
+            margin-top: 20px;
+        }
+
+        /* ===== CHART CONTROLS ===== */
+        .chart-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .chart-controls .form-group {
+            margin-bottom: 0;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* ===== DATA TABLE ===== */
+        .data-table {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 20px;
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-weight: 600;
+            padding: 18px 16px;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-size: 0.9em;
+            position: sticky;
+            top: 0;
+        }
+
+        th:first-child {
+            border-radius: 12px 0 0 12px;
+        }
+
+        th:last-child {
+            border-radius: 0 12px 12px 0;
+        }
+
+        td {
+            padding: 16px;
+            color: #475569;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        tr:hover td {
+            background: rgba(67, 97, 238, 0.05);
+            transform: translateX(4px);
+        }
+
+        /* ===== PREDICTION RESULT ===== */
+        .prediction-result {
+            background: linear-gradient(135deg, rgba(6, 214, 160, 0.1), rgba(6, 214, 160, 0.05));
+            border: 2px solid var(--success);
+            padding: 25px;
+            border-radius: 16px;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prediction-result::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 100%;
+            background: var(--success);
+        }
+
+        .prediction-result h4 {
+            color: var(--success);
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-box:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+        }
+
+        .stat-box:nth-child(1) {
+            border-top: 4px solid var(--primary);
+        }
+
+        .stat-box:nth-child(2) {
+            border-top: 4px solid var(--secondary);
+        }
+
+        .stat-box:nth-child(3) {
+            border-top: 4px solid var(--success);
+        }
+
+        .stat-box:nth-child(4) {
+            border-top: 4px solid var(--warning);
+        }
+
+        .stat-value {
+            font-size: 2.8em;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 15px 0;
+            line-height: 1;
+        }
+
+        .stat-box:nth-child(2) .stat-value {
+            color: var(--secondary);
+        }
+
+        .stat-box:nth-child(3) .stat-value {
+            color: var(--success);
+        }
+
+        .stat-box:nth-child(4) .stat-value {
+            color: var(--warning);
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            background: white;
+            padding: 10px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .tab-btn {
+            padding: 14px 28px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .tab-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== NOTIFICATIONS ===== */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 20px 28px;
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            transform-origin: top right;
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, var(--info), #0d6efd);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1200px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                height: 380px;
+            }
+
+            .chart-wrapper {
+                height: 260px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .user-info {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .user-details {
+                text-align: center;
+            }
+
+            .logout-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .btn {
+                padding: 16px 28px;
+                width: 100%;
+            }
+
+            .card {
+                padding: 25px;
+            }
+
+            .stat-value {
+                font-size: 2.2em;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .tab-btn {
+                width: 100%;
+            }
+
+            .chart-controls {
+                flex-direction: column;
+            }
+
+            .chart-controls .form-group {
+                min-width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .card,
+            .chart-card,
+            .data-table {
+                padding: 20px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .delete-btn {
+            background: #ef476f;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #d32f2f;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #3a56d4, #6300a8);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header with Logout -->
+        <div class="header">
+            <div class="header-content">
+                <h1>🌳 Future Forest</h1>
+                <p>Forest data prediction using ML</p>
+            </div>
+            <div class="user-info" id="userInfo">
+                <div class="user-details">
+                    <div class="user-name" id="userName">Loading...</div>
+                    <div class="user-email" id="userEmail"></div>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('predict')">Make Predictions</button>
+            <button class="tab-btn" onclick="switchTab('data')">View/Upload Data</button>
+            <button class="tab-btn" onclick="switchTab('visualizations')">Visualizations</button>
+            <button class="tab-btn" onclick="switchTab('history')">Prediction History</button>
+            <button class="tab-btn" onclick="switchTab('about')">About</button>
+            <button class="tab-btn" onclick="switchTab('contact')">Contact</button>
+        </div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard">
+                <div class="card">
+                    <h3>📊 System Overview</h3>
+                    <div id="stats-container" class="stats-grid">
+                        <!-- Stats will be loaded here -->
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button onclick="loadDefaultData()" class="btn">Load Default Dataset</button>
+                        <button onclick="refreshStats()" class="btn btn-secondary" style="margin-left: 10px;">Refresh
+                            Stats</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>📈 Quick Prediction</h3>
+                    <div class="form-group">
+                        <label for="quick-metric">Select Metric</label>
+                        <select id="quick-metric"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quick-year">Target Year</label>
+                        <input type="number" id="quick-year" min="2000" max="2100" value="2025">
+                    </div>
+                    <button onclick="makeQuickPrediction()" class="btn">Make Quick Prediction</button>
+                    <div id="quick-result"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Prediction Tab -->
+        <div id="predict" class="tab-content">
+            <div class="card">
+                <h3>🔮 Make Prediction</h3>
+                <div id="prediction-steps">
+                    <!-- Step 1: Select dataset -->
+                    <div class="prediction-step active" id="step-1">
+                        <h4>Step 1: Select Dataset</h4>
+                        <div class="form-group">
+                            <label for="prediction-dataset">Select Dataset</label>
+                            <select id="prediction-dataset" onchange="loadDatasetColumns(this.value)">
+                                <option value="">-- Select Dataset --</option>
+                                <!-- Datasets will be loaded here -->
+                            </select>
+                        </div>
+                        <button onclick="nextStep(2)" class="btn">Next</button>
+                    </div>
+
+                    <!-- Step 2: Select metric -->
+                    <div class="prediction-step" id="step-2">
+                        <h4>Step 2: Select Metric</h4>
+                        <div class="form-group">
+                            <label for="prediction-column">Select Column for Prediction</label>
+                            <select id="prediction-column">
+                                <!-- Columns will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="prediction-year">Target Year</label>
+                            <input type="number" id="prediction-year" min="2000" max="2100" value="2025">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="prevStep(1)" class="btn btn-secondary">Previous</button>
+                            <button onclick="makePrediction()" class="btn">Make Prediction</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="prediction-result" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- Data Tab -->
+        <div id="data" class="tab-content">
+            <!-- Upload Section -->
+            <div class="card">
+                <h3>📋 Upload Data</h3>
+                <div class="file-upload">
+                    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="uploadFile()">
+                    <label for="file-input">
+                        <i>📁</i>
+                        <span style="font-size: 1.2em; font-weight: 600; color: #4361ee;">Click to upload CSV or Excel
+                            file</span>
+                        <span style="color: #64748b; font-size: 0.9em;">Supports .csv, .xlsx, .xls files</span>
+                    </label>
+                </div>
+                <div id="upload-result"></div>
+            </div>
+
+            <!-- Datasets Management Panel -->
+            <div id="datasets-management" class="card" style="margin-top: 30px;">
+                <h3>📁 Your Datasets</h3>
+                <div id="datasets-table-container">
+                    <!-- Datasets table will be loaded here -->
+                </div>
+            </div>
+
+            <!-- View Data Section -->
+            <div class="data-table">
+                <h3>📊 View Data</h3>
+                <div style="margin-bottom: 15px;">
+                    <div class="form-group" style="max-width: 300px;">
+                        <label for="dataset-select">Select Dataset to View:</label>
+                        <select id="dataset-select" onchange="loadSelectedDataset()">
+                            <option value="">-- Select Dataset --</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="data-table-container">
+                    <table id="data-table">
+                        <thead id="data-table-head">
+                            <!-- Headers will be loaded here -->
+                        </thead>
+                        <tbody id="data-table-body">
+                            <!-- Data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add CSS for Modal -->
+        <style>
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 1000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+            }
+
+            .modal-content {
+                background-color: white;
+                margin: 5% auto;
+                padding: 30px;
+                border-radius: 20px;
+                width: 80%;
+                max-width: 900px;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            }
+
+            .close {
+                color: #aaa;
+                float: right;
+                font-size: 28px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+
+            .close:hover {
+                color: black;
+            }
+
+            .mapping-table-container {
+                max-height: 400px;
+                overflow-y: auto;
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                margin-top: 20px;
+            }
+
+            .mapping-table-container table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .mapping-table-container th {
+                position: sticky;
+                top: 0;
+                background: #4361ee;
+                z-index: 10;
+            }
+
+            .status-badge {
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.85em;
+                font-weight: 600;
+            }
+
+            .status-managed {
+                background: #06d6a0;
+                color: white;
+            }
+
+            .status-unmanaged {
+                background: #ff9e00;
+                color: white;
+            }
+
+            .status-default {
+                background: #4361ee;
+                color: white;
+            }
+
+            /* About and Contact specific styles */
+            .about-section {
+                transition: transform 0.3s ease;
+            }
+
+            .about-section:hover {
+                transform: translateY(-5px);
+            }
+
+            .feature-box {
+                transition: all 0.3s ease;
+            }
+
+            .feature-box:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            }
+
+            .contact-card {
+                transition: all 0.3s ease;
+            }
+
+            .contact-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 30px rgba(67, 97, 238, 0.15);
+            }
+
+            .student-card {
+                transition: all 0.3s ease;
+            }
+
+            .student-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            }
+
+            /* Email link hover effects */
+            a[href^="mailto:"] {
+                transition: all 0.3s ease;
+            }
+
+            a[href^="mailto:"]:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .fa-sign-out-alt {
+                font-family: 'Font Awesome 6 Free';
+                font-weight: 900;
+            }
+        </style>
+
+        <!-- Visualizations Tab -->
+        <div id="visualizations" class="tab-content">
+            <div class="card">
+                <h3>📊 Custom Visualization</h3>
+                <div class="form-group">
+                    <label for="chart-dataset">Select Dataset</label>
+                    <select id="chart-dataset" onchange="loadDatasetForVisualization(this.value)">
+                        <option value="">-- Select Dataset --</option>
+                        <!-- Datasets will be loaded here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="chart-type">Chart Type</label>
+                    <select id="chart-type" onchange="updateChart()">
+                        <option value="line">Line Chart</option>
+                        <option value="bar">Bar Chart</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="scatter">Scatter Plot</option>
+
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="chart-x-axis">X-Axis Column</label>
+                    <select id="chart-x-axis" onchange="updateChart()"></select>
+                </div>
+                <div class="form-group">
+                    <label for="chart-y-axis">Y-Axis Column</label>
+                    <select id="chart-y-axis" onchange="updateChart()"></select>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-wrapper">
+                        <canvas id="customChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="card">
+                <h3>📜 Prediction History</h3>
+
+                <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="stats-summary" style="display: flex; gap: 20px;">
+                        <div style="background: #e3f2fd; padding: 10px 20px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #1976d2;">Total Predictions</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #1976d2;" id="total-pred-count">0
+                            </div>
+                        </div>
+                        <div style="background: #f3e5f5; padding: 10px 20px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #7b1fa2;">Quick Predictions</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #7b1fa2;" id="quick-pred-count">0
+                            </div>
+                        </div>
+                        <div style="background: #e8f5e9; padding: 10px 20px; border-radius: 8px;">
+                            <div style="font-size: 0.9em; color: #2e7d32;">Standard Predictions</div>
+                            <div style="font-size: 1.8em; font-weight: bold; color: #2e7d32;" id="standard-pred-count">0
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="loadPredictions()" class="btn">
+                            🔄 Refresh
+                        </button>
+                        <button onclick="clearPredictions()" class="btn btn-secondary">
+                            🗑️ Clear All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Predictions Table -->
+                <div style="margin-bottom: 40px;">
+                    <h4 style="color: #1976d2; margin-bottom: 15px;">
+                        🔍 Quick Predictions
+                        <span
+                            style="background: #e3f2fd; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; margin-left: 10px;">
+                            From Dashboard Tab
+                        </span>
+                    </h4>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #e3f2fd;">
+                                    <th style="padding: 12px 15px; text-align: left;">Date & Time</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Dataset</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Metric</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Year</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Predicted Value</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Accuracy</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quick-predictions-table-body">
+                                <!-- Quick predictions will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Standard Predictions Table -->
+                <div>
+                    <h4 style="color: #2e7d32; margin-bottom: 15px;">
+                        📊 Make Predictions
+                        <span
+                            style="background: #e8f5e9; padding: 5px 10px; border-radius: 4px; font-size: 0.8em; margin-left: 10px;">
+                            From Make Prediction Tab
+                        </span>
+                    </h4>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #e8f5e9;">
+                                    <th style="padding: 12px 15px; text-align: left;">Date & Time</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Dataset</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Metric</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Year</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Predicted Value</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Accuracy</th>
+                                    <th style="padding: 12px 15px; text-align: left;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="standard-predictions-table-body">
+                                <!-- Standard predictions will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- About Tab -->
+        <div id="about" class="tab-content">
+            <div class="card">
+                <h3>ℹ️ About Forest Data Analysis & Prediction System</h3>
+
+                <div style="margin-top: 25px;">
+                    <div class="about-section"
+                        style="background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05)); padding: 25px; border-radius: 16px; margin-bottom: 25px;">
+                        <h4 style="color: #4361ee; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <i style="background: #4361ee; color: white; padding: 8px; border-radius: 8px;">🎯</i>
+                            Project Overview
+                        </h4>
+                        <p style="line-height: 1.7; color: #475569;">
+                            The Forest Data Analysis & Prediction System is a comprehensive web-based platform designed
+                            to analyze environmental data and predict future trends using machine learning algorithms.
+                            This system helps researchers, environmentalists, and policymakers make data-driven
+                            decisions for forest conservation and climate change mitigation.
+                        </p>
+                    </div>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                        <div class="feature-box"
+                            style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid #06d6a0;">
+                            <h5
+                                style="color: #06d6a0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                📊 Data Analysis
+                            </h5>
+                            <ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+                                <li>Multi-dataset management</li>
+                                <li>Real-time data visualization</li>
+                                <li>Statistical analysis tools</li>
+                                <li>Interactive charts and graphs</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-box"
+                            style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid #7209b7;">
+                            <h5
+                                style="color: #7209b7; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                🔮 Prediction Engine
+                            </h5>
+                            <ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+                                <li>Machine learning predictions</li>
+                                <li>Multiple prediction models</li>
+                                <li>Accuracy metrics</li>
+                                <li>Future trend forecasting</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-box"
+                            style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-left: 5px solid #ff9e00;">
+                            <h5
+                                style="color: #ff9e00; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                📈 Visualization
+                            </h5>
+                            <ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+                                <li>Interactive charts (Line, Bar, Pie, Scatter)</li>
+                                <li>Custom chart configurations</li>
+                                <li>Real-time data updates</li>
+                                <li>Export capabilities</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="about-section"
+                        style="background: linear-gradient(135deg, rgba(6, 214, 160, 0.1), rgba(6, 214, 160, 0.05)); padding: 25px; border-radius: 16px; margin-bottom: 25px;">
+                        <h4 style="color: #06d6a0; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <i style="background: #06d6a0; color: white; padding: 8px; border-radius: 8px;">🚀</i>
+                            Key Features
+                        </h4>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div style="background: white; padding: 15px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2em; margin-bottom: 10px;">📁</div>
+                                <div style="font-weight: 600; color: #4361ee;">Data Management</div>
+                                <div style="font-size: 0.9em; color: #64748b;">Upload, view, and manage multiple
+                                    datasets</div>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2em; margin-bottom: 10px;">🤖</div>
+                                <div style="font-weight: 600; color: #7209b7;">ML Predictions</div>
+                                <div style="font-size: 0.9em; color: #64748b;">Accurate machine learning predictions
+                                </div>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2em; margin-bottom: 10px;">📊</div>
+                                <div style="font-weight: 600; color: #ff9e00;">Visual Analytics</div>
+                                <div style="font-size: 0.9em; color: #64748b;">Interactive charts and graphs</div>
+                            </div>
+                            <div style="background: white; padding: 15px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 2em; margin-bottom: 10px;">📜</div>
+                                <div style="font-weight: 600; color: #ef476f;">History Tracking</div>
+                                <div style="font-size: 0.9em; color: #64748b;">Complete prediction history</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="about-section"
+                        style="background: linear-gradient(135deg, rgba(255, 158, 0, 0.1), rgba(255, 158, 0, 0.05)); padding: 25px; border-radius: 16px;">
+                        <h4 style="color: #ff9e00; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <i style="background: #ff9e00; color: white; padding: 8px; border-radius: 8px;">🎯</i>
+                            Project Objectives
+                        </h4>
+                        <div style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 300px;">
+                                <h5 style="color: #334155; margin-bottom: 10px;">🌳 Environmental Goals</h5>
+                                <ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+                                    <li>Monitor forest health and changes</li>
+                                    <li>Predict environmental trends</li>
+                                    <li>Support conservation efforts</li>
+                                    <li>Aid climate change research</li>
+                                </ul>
+                            </div>
+                            <div style="flex: 1; min-width: 300px;">
+                                <h5 style="color: #334155; margin-bottom: 10px;">💻 Technical Goals</h5>
+                                <ul style="color: #475569; padding-left: 20px; line-height: 1.8;">
+                                    <li>User-friendly web interface</li>
+                                    <li>Accurate ML predictions</li>
+                                    <li>Scalable data processing</li>
+                                    <li>Real-time visualizations</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Contact Tab -->
+        <div id="contact" class="tab-content">
+            <div class="card">
+                <h3>📞 Contact Information</h3>
+
+                <div style="margin-top: 25px;">
+                    <!-- Guided Faculty Section -->
+                    <div style="margin-bottom: 30px;">
+                        <h4
+                            style="color: #4361ee; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #4361ee; display: flex; align-items: center; gap: 10px;">
+                            👨‍🏫 Guided Faculty
+                        </h4>
+
+                        <div class="contact-card"
+                            style="background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05)); padding: 25px; border-radius: 16px;">
+                            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                                <div
+                                    style="width: 80px; height: 80px; background: linear-gradient(135deg, #4361ee, #7209b7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; color: white;">
+                                    👨‍🏫
+                                </div>
+                                <div style="flex: 1;">
+                                    <h5 style="font-size: 1.3em; margin-bottom: 8px; color: #334155;">Dr. Abha Manohar K
+                                    </h5>
+                                    <p style="color: #64748b; margin-bottom: 5px;">
+                                        <strong>Position:</strong> Assistant Professor (Agroforestry)
+                                    </p>
+                                    <p style="color: #64748b; margin-bottom: 5px;">
+                                        <strong>Department:</strong> MS Swaminathan School of Agriculture
+                                    </p>
+                                    <p style="color: #64748b; margin-bottom: 10px;">
+                                        <strong>Expertise:</strong> Forestry, Envirnoment science, Modelling
+                                    </p>
+                                    <a href="mailto:john.smith@university.edu"
+                                        style="display: inline-flex; align-items: center; gap: 8px; background: #4361ee; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;">
+                                        <span>📧</span>
+                                        <span>abha.manohar@cutm.ac.in</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Team Section -->
+                    <div>
+                        <h4
+                            style="color: #06d6a0; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #06d6a0; display: flex; align-items: center; gap: 10px;">
+                            👨‍🎓 Student Team
+                        </h4>
+
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                            <!-- Student 1 -->
+                            <div class="student-card"
+                                style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #4361ee;">
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div
+                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #4361ee, #7209b7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
+                                        👨‍💻
+                                    </div>
+                                    <div>
+                                        <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Harshdeep
+                                            Kumar</h5>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Position:</strong> Full Stack Developer
+                                        </p>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Role:</strong> Backend Development, ML Models
+                                        </p>
+                                        <a href="230101120203@centurionuniv.edu.in"
+                                            style="display: inline-flex; align-items: center; gap: 5px; color: #4361ee; text-decoration: none; font-weight: 600; font-size: 0.9em;">
+                                            <span>📧</span>
+                                            <span>230101120203@centurionuniv.edu.in</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student 2 -->
+                            <div class="student-card"
+                                style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #06d6a0;">
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div
+                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #06d6a0, #0cb48a); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
+                                        👩‍💻
+                                    </div>
+                                    <div>
+                                        <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Ankadala
+                                            Lekhana</h5>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Position:</strong> Frontend Developer & UI/UX Designer
+                                        </p>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Role:</strong> Dashboard Design, Visualization
+                                        </p>
+                                        <a href="230101120184@centurionuniv.edu.in"
+                                            style="display: inline-flex; align-items: center; gap: 5px; color: #06d6a0; text-decoration: none; font-weight: 600; font-size: 0.9em;">
+                                            <span>📧</span>
+                                            <span>230101120184@centurionuniv.edu.in</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student 3 -->
+                            <div class="student-card"
+                                style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #ff9e00;">
+                                <div style="display: flex; align-items: flex-start; gap: 15px;">
+                                    <div
+                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #ff9e00, #ff7b00); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
+                                        👨‍🔬
+                                    </div>
+                                    <div>
+                                        <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Addapakala
+                                            Navya Sri</h5>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Position:</strong> Data Analyst & Researcher
+                                        </p>
+                                        <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
+                                            <strong>Role:</strong> Data Collection, Analysis, Documentation
+                                        </p>
+                                        <a href="mailto:230101120185@centurionuniv.edu.in"
+                                            style="display: inline-flex; align-items: center; gap: 5px; color: #ff9e00; text-decoration: none; font-weight: 600; font-size: 0.9em;">
+                                            <span>📧</span>
+                                            <span>230101120185@centurionuniv.edu.in</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Team Info -->
+                        <div
+                            style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, rgba(239, 71, 111, 0.1), rgba(239, 71, 111, 0.05)); border-radius: 16px;">
+                            <h5
+                                style="color: #ef476f; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                👥 Team Information
+                            </h5>
+                            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <p style="color: #475569; margin-bottom: 8px;">
+                                        <strong>🎓 University:</strong> Centurion University of Science and Technology
+                                    </p>
+                                    <p style="color: #475569; margin-bottom: 8px;">
+                                        <strong>📅 Project Duration:</strong> 6 Months
+                                    </p>
+                                </div>
+                                <div style="flex: 1; min-width: 200px;">
+                                    <p style="color: #475569; margin-bottom: 8px;">
+                                        <strong>🔧 Technologies:</strong> Python, Flask, JavaScript, ML
+                                    </p>
+                                    <p style="color: #475569; margin-bottom: 8px;">
+                                        <strong>🎯 Project Type:</strong> Final Year Project
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Font Awesome for icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+        <script>
+            // Global variables
+            let charts = {};
+            let currentDataset = null;
+            let datasets = [];
+            let metrics = [];
+            let currentStep = 1;
+
+            // Check if user is logged in
+            async function checkAuth() {
+                try {
+                    const response = await fetch('/api/auth/check-session');
+                    const data = await response.json();
+
+                    if (!data.authenticated) {
+                        // Redirect to main.html if not logged in
+                        window.location.href = '/';
+                        return false;
+                    }
+
+                    // Update user info in header
+                    if (data.user) {
+                        document.getElementById('userName').textContent = data.user.name || 'User';
+                        document.getElementById('userEmail').textContent = data.user.email || '';
+                    }
+
+                    return true;
+                } catch (error) {
+                    console.error('Auth check error:', error);
+                    window.location.href = '/';
+                    return false;
+                }
+            }
+
+            // Logout function
+            async function logout() {
+                try {
+                    showNotification('Logging out...', 'info');
+
+                    const response = await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showNotification('Logged out successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1500);
+                    } else {
+                        showNotification('Error logging out', 'error');
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    showNotification('Error logging out', 'error');
+                }
+            }
+
+            // Initialize the application
+            document.addEventListener('DOMContentLoaded', async function () {
+                console.log("DOM Loaded - Initializing app...");
+
+                // Check authentication first
+                const isAuthenticated = await checkAuth();
+                if (!isAuthenticated) return;
+
+                initializeCharts();
+                loadInitialData();
+            });
+
+            // Load initial data
+            async function loadInitialData() {
+                try {
+                    console.log("Loading initial data...");
+
+                    // Load metrics
+                    await loadMetrics();
+
+                    // Load stats
+                    await loadStats();
+
+                    // Load datasets
+                    await loadDatasets();
+
+                    // Load chart data
+                    await loadChartData();
+
+                    // Load predictions history
+                    await loadPredictions();
+
+                    console.log("Initial data loaded successfully");
+                } catch (error) {
+                    console.error("Error loading initial data:", error);
+                }
+            }
+
+            // Tab switching
+            function switchTab(tabName) {
+                console.log(`Switching to tab: ${tabName}`);
+
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+
+                // Deactivate all buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+
+                // Show selected tab
+                document.getElementById(tabName).classList.add('active');
+
+                // Activate clicked button
+                event.target.classList.add('active');
+
+                // Load data for the tab
+                if (tabName === 'history') {
+                    loadPredictions();
+                } else if (tabName === 'data') {
+                    loadDatasets();
+                } else if (tabName === 'dashboard') {
+                    loadChartData();
+                } else if (tabName === 'predict') {
+                    resetPredictionSteps();
+                } else if (tabName === 'visualizations') {
+                    // Initialize visualization tab
+                    if (datasets.length > 0) {
+                        loadDatasetForVisualization(datasets[0].name);
+                    }
+                }
+            }
+
+            // Load default dataset
+            async function loadDefaultData() {
+                try {
+                    console.log("Loading default dataset...");
+                    showNotification("Loading default dataset...", 'info');
+
+                    const response = await fetch('/api/load-default-data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    console.log("Load data response status:", response.status);
+
+                    const result = await response.json();
+                    console.log("Load data result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Wait 2 seconds for database to update, then reload everything
+                        setTimeout(() => {
+                            console.log("Reloading all data after CSV load...");
+                            loadStats();
+                            loadDatasets();
+
+                            // Reinitialize and reload charts
+                            setTimeout(() => {
+                                loadChartData();
+                            }, 1000);
+
+                        }, 2000);
+
+                    } else {
+                        showNotification(result.message, 'error');
+                        console.error("Load data failed:", result.message);
+                    }
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    showNotification('Error loading data. Check console for details.', 'error');
+                }
+            }
+
+            // Load datasets
+            async function loadDatasets() {
+                try {
+                    console.log("Loading datasets...");
+                    const response = await fetch('/api/datasets');
+
+                    if (!response.ok) {
+                        console.error(`Datasets API Error: ${response.status} ${response.statusText}`);
+                        showNotification(`Failed to load datasets: ${response.status}`, 'error');
+                        datasets = [];
+                        return;
+                    }
+
+                    datasets = await response.json();
+                    console.log(`Received ${datasets.length} datasets:`, datasets);
+
+                    // Populate dataset select elements
+                    const selectIds = ['dataset-select', 'prediction-dataset', 'chart-dataset'];
+
+                    selectIds.forEach(id => {
+                        const select = document.getElementById(id);
+                        if (!select) {
+                            console.error(`Element #${id} not found`);
+                            return;
+                        }
+
+                        // Save current value
+                        const currentValue = select.value;
+                        select.innerHTML = '<option value="">-- Select Dataset --</option>';
+
+                        if (datasets.length === 0) {
+                            const option = document.createElement('option');
+                            option.value = "";
+                            option.textContent = "No datasets found (Upload data first)";
+                            select.appendChild(option);
+                            console.warn("No datasets received from API");
+                        } else {
+                            datasets.forEach(dataset => {
+                                const option = document.createElement('option');
+                                option.value = dataset.name;
+                                let displayText = dataset.name;
+                                if (dataset.is_primary) {
+                                    displayText += " ★";
+                                }
+                                option.textContent = `${displayText} (${dataset.row_count} rows)`;
+                                select.appendChild(option);
+                            });
+
+                            // Restore previous value if possible
+                            if (currentValue) {
+                                select.value = currentValue;
+                            }
+
+                            console.log(`Populated ${id} with ${datasets.length} datasets`);
+                        }
+                    });
+
+                    // Also populate datasets management
+                    updateDatasetsManagement();
+
+                    if (datasets.length > 0) {
+                        showNotification(`Loaded ${datasets.length} datasets`, 'success');
+                    }
+                } catch (error) {
+                    console.error('Error loading datasets:', error);
+                    showNotification('Error loading datasets. Check console for details.', 'error');
+                    datasets = [];
+                }
+            }
+
+            // Update datasets management panel
+            function updateDatasetsManagement() {
+                const container = document.getElementById('datasets-management');
+                if (!container) return;
+
+                if (datasets.length === 0) {
+                    container.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 10px;">
+                    <h3 style="color: #666; margin-bottom: 15px;">📁 No Datasets</h3>
+                    <p style="color: #888;">Upload your first dataset to get started!</p>
+                </div>
+            `;
+                } else {
+                    let html = `
+                <h3>📁 Your Datasets (${datasets.length})</h3>
+                <div style="margin-top: 20px;">
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                            <thead>
+                                <tr style="background: linear-gradient(135deg, #4361ee, #7209b7); color: white;">
+                                    <th style="padding: 12px 15px; text-align: left;">Dataset Name</th>
+                                    <th style="padding: 12px 15px; text-align: center;">Rows</th>
+                                    <th style="padding: 12px 15px; text-align: center;">Columns</th>
+                                    <th style="padding: 12px 15px; text-align: center;">Status</th>
+                                    <th style="padding: 12px 15px; text-align: center;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+                    datasets.forEach(dataset => {
+                        html += `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 12px 15px;">
+                            <strong>${dataset.name}</strong>
+                            ${dataset.name === 'forest_data' ? '<br><small style="color: #666;">(Default Dataset)</small>' : ''}
+                        </td>
+                        <td style="padding: 12px 15px; text-align: center;">${dataset.row_count}</td>
+                        <td style="padding: 12px 15px; text-align: center;">${dataset.column_count}</td>
+                        <td style="padding: 12px 15px; text-align: center;">
+                            ${dataset.is_primary ?
+                                '<span style="background: #06d6a0; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9em;">★ Primary</span>' :
+                                '<span style="background: #64748b; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9em;">Standard</span>'}
+                        </td>
+                        <td style="padding: 12px 15px; text-align: center;">
+                            ${!dataset.is_primary && dataset.name !== 'forest_data' ? `
+                                <button onclick="setAsPrimary('${dataset.name}')" 
+                                        style="background: #06d6a0; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 5px; font-size: 0.9em;">
+                                    Set as Primary
+                                </button>
+                            ` : ''}
+                            ${dataset.name !== 'forest_data' ? `
+                                <button onclick="deleteDataset('${dataset.name}')" 
+                                        style="background: #ef476f; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9em;">
+                                    Delete
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+                    });
+
+                    html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                        <p style="margin: 0; color: #1976d2;">
+                            <strong>Note:</strong> Primary dataset is used for system statistics and default predictions.
+                            You can only have one primary dataset at a time.
+                        </p>
+                    </div>
+                </div>
+            `;
+
+                    container.innerHTML = html;
+                }
+            }
+
+            // Load selected dataset data
+            async function loadSelectedDataset() {
+                const datasetName = document.getElementById('dataset-select').value;
+                if (!datasetName) {
+                    const tbody = document.getElementById('data-table-body');
+                    const thead = document.getElementById('data-table-head');
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px;">Please select a dataset</td></tr>';
+                    thead.innerHTML = '';
+                    return;
+                }
+
+                await loadDatasetData(datasetName);
+            }
+
+            // Load dataset data - UPDATED with better error handling
+            async function loadDatasetData(datasetName) {
+                try {
+                    console.log(`Loading dataset: ${datasetName}`);
+                    showNotification(`Loading dataset: ${datasetName}...`, 'info');
+
+                    const tbody = document.getElementById('data-table-body');
+                    const thead = document.getElementById('data-table-head');
+
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px;">Loading data...</td></tr>';
+                    thead.innerHTML = '';
+
+                    const response = await fetch(`/api/dataset/${encodeURIComponent(datasetName)}`);
+
+                    if (!response.ok) {
+                        console.error(`Dataset API Error: ${response.status} ${response.statusText}`);
+                        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">Failed to load dataset: HTTP ${response.status}</td></tr>`;
+                        showNotification(`Failed to load dataset: HTTP ${response.status}`, 'error');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log(`Dataset data received:`, result);
+
+                    if (!result.success) {
+                        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">${result.message}</td></tr>`;
+                        showNotification(result.message, 'error');
+                        return;
+                    }
+
+                    const data = result.data;
+                    currentDataset = { name: datasetName, data: data };
+
+                    // Create table headers
+                    if (data.length > 0) {
+                        const firstRow = data[0];
+                        const headers = Object.keys(firstRow);
+
+                        let headerHtml = '<tr>';
+                        headers.forEach(header => {
+                            headerHtml += `<th>${header}</th>`;
+                        });
+                        headerHtml += '</tr>';
+
+                        thead.innerHTML = headerHtml;
+
+                        // Create table rows (limit to 100 for performance)
+                        tbody.innerHTML = '';
+                        const displayData = data.slice(0, 100);
+
+                        displayData.forEach(row => {
+                            const tr = document.createElement('tr');
+                            headers.forEach(header => {
+                                const td = document.createElement('td');
+                                let value = row[header];
+
+                                // Format numeric values
+                                if (typeof value === 'number') {
+                                    value = Number(value.toFixed(4));
+                                }
+
+                                td.textContent = value !== null && value !== undefined ? value : '';
+                                tr.appendChild(td);
+                            });
+                            tbody.appendChild(tr);
+                        });
+
+                        // Show total count message
+                        if (data.length > 100) {
+                            const infoRow = document.createElement('tr');
+                            const colCount = headers.length;
+                            infoRow.innerHTML = `
+                    <td colspan="${colCount}" style="text-align: center; background-color: #f0f0f0; padding: 10px;">
+                        Showing 100 of ${data.length} total rows
+                    </td>
+                `;
+                            tbody.appendChild(infoRow);
+                        }
+
+                        showNotification(`Loaded ${displayData.length} rows from ${datasetName}`, 'success');
+                        console.log(`Displayed ${displayData.length} rows`);
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px;">No data available in this dataset</td></tr>';
+                        showNotification('Dataset is empty', 'warning');
+                    }
+
+                } catch (error) {
+                    console.error('Error loading dataset:', error);
+                    const tbody = document.getElementById('data-table-body');
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: red;">Error loading dataset: ${error.message}</td></tr>`;
+                    showNotification(`Error loading dataset: ${error.message}`, 'error');
+                }
+            }
+
+            // Load dataset columns for prediction
+            async function loadDatasetColumns(datasetName) {
+                try {
+                    console.log(`Loading columns for dataset: ${datasetName}`);
+
+                    const columnSelect = document.getElementById('prediction-column');
+                    columnSelect.innerHTML = '<option value="">-- Select Column --</option>';
+
+                    if (!datasetName) return;
+
+                    showNotification(`Loading columns for ${datasetName}...`, 'info');
+
+                    const response = await fetch(`/api/dataset/${datasetName}/columns`);
+
+                    if (!response.ok) {
+                        console.error(`Columns API Error: ${response.status}`);
+                        showNotification('Failed to load columns from API, trying fallback...', 'warning');
+
+                        // Fallback: Try to load dataset and extract columns
+                        try {
+                            const datasetResponse = await fetch(`/api/dataset/${datasetName}?limit=1`);
+                            if (datasetResponse.ok) {
+                                const datasetResult = await datasetResponse.json();
+                                if (datasetResult.success && datasetResult.data && datasetResult.data.length > 0) {
+                                    // Extract column names from first row
+                                    const firstRow = datasetResult.data[0];
+                                    const columns = Object.keys(firstRow);
+
+                                    columns.forEach(column => {
+                                        const option = document.createElement('option');
+                                        option.value = column;
+                                        option.textContent = column;
+                                        columnSelect.appendChild(option);
+                                    });
+
+                                    showNotification(`Loaded ${columns.length} columns from data`, 'success');
+                                    return;
+                                }
+                            }
+                        } catch (fallbackError) {
+                            console.error("Fallback failed:", fallbackError);
+                        }
+
+                        showNotification('Failed to load columns', 'error');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log("Columns result:", result);
+
+                    if (result.success && result.columns && result.columns.length > 0) {
+                        // Clear existing options
+                        columnSelect.innerHTML = '<option value="">-- Select Column --</option>';
+
+                        // Add column options
+                        result.columns.forEach(column => {
+                            const option = document.createElement('option');
+                            option.value = column;
+                            option.textContent = column;
+                            columnSelect.appendChild(option);
+                        });
+
+                        console.log(`Loaded ${result.columns.length} columns from ${datasetName}`);
+                        showNotification(`Loaded ${result.columns.length} columns from ${datasetName}`, 'success');
+                    } else {
+                        console.error("No columns found or API error:", result.message);
+                        showNotification(result.message || 'No columns found in dataset', 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error loading columns:', error);
+                    showNotification('Error loading columns. Please try again.', 'error');
+                }
+            }
+
+            // Load dataset for visualization
+            async function loadDatasetForVisualization(datasetName) {
+                try {
+                    console.log(`Loading dataset for visualization: ${datasetName}`);
+
+                    const xAxisSelect = document.getElementById('chart-x-axis');
+                    const yAxisSelect = document.getElementById('chart-y-axis');
+
+                    xAxisSelect.innerHTML = '<option value="">-- Select X-Axis --</option>';
+                    yAxisSelect.innerHTML = '<option value="">-- Select Y-Axis --</option>';
+
+                    if (!datasetName) {
+                        showNotification('Please select a dataset first', 'warning');
+                        return;
+                    }
+
+                    const response = await fetch(`/api/dataset/${datasetName}/columns`);
+
+                    if (!response.ok) {
+                        console.error(`Visualization columns API Error: ${response.status}`);
+                        showNotification('Failed to load columns for visualization', 'error');
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success && result.columns) {
+                        // Clear existing options
+                        xAxisSelect.innerHTML = '<option value="">-- Select X-Axis --</option>';
+                        yAxisSelect.innerHTML = '<option value="">-- Select Y-Axis --</option>';
+
+                        // Add options to both selects
+                        result.columns.forEach(column => {
+                            const optionX = document.createElement('option');
+                            optionX.value = column;
+                            optionX.textContent = column;
+                            xAxisSelect.appendChild(optionX);
+
+                            const optionY = document.createElement('option');
+                            optionY.value = column;
+                            optionY.textContent = column;
+                            yAxisSelect.appendChild(optionY);
+                        });
+
+                        // Auto-select first column for X-axis
+                        if (result.columns.length > 0) {
+                            xAxisSelect.selectedIndex = 1;
+                        }
+
+                        // Auto-select second column for Y-axis if available
+                        if (result.columns.length > 1) {
+                            yAxisSelect.selectedIndex = 2;
+                        }
+
+                        // Update chart if both axes are selected
+                        if (xAxisSelect.value && yAxisSelect.value) {
+                            setTimeout(() => updateChart(), 500);
+                        }
+                    }
+
+                } catch (error) {
+                    console.error('Error loading dataset for visualization:', error);
+                    showNotification('Error loading dataset for visualization', 'error');
+                }
+            }
+
+            // Upload file
+            async function uploadFile() {
+                const fileInput = document.getElementById('file-input');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    showNotification('Please select a file first', 'error');
+                    return;
+                }
+
+                console.log(`Uploading file: ${file.name}, size: ${file.size} bytes, type: ${file.type}`);
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    showNotification(`Uploading ${file.name}...`, 'info');
+
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    console.log("Upload result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Clear file input
+                        fileInput.value = '';
+
+                        // Reload datasets
+                        setTimeout(() => {
+                            loadDatasets();
+                        }, 1000);
+
+                    } else {
+                        showNotification(result.message, 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    showNotification('Error uploading file. Check console for details.', 'error');
+                }
+            }
+
+            // Set dataset as primary - CORRECTED VERSION
+            async function setAsPrimary(datasetName) {
+                if (!confirm(`Set "${datasetName}" as primary dataset?`)) {
+                    return;
+                }
+
+                try {
+                    showNotification(`Setting ${datasetName} as primary...`, 'info');
+
+                    const response = await fetch('/api/manage-datasets', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'set_primary',
+                            dataset_name: datasetName
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    console.log("Set primary result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Reload datasets
+                        setTimeout(() => {
+                            loadDatasets();
+                        }, 1000);
+
+                    } else {
+                        showNotification(result.message || 'Failed to set as primary', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error setting primary dataset:', error);
+                    showNotification('Error setting primary dataset: ' + error.message, 'error');
+                }
+            }
+
+            // Delete dataset - CORRECTED VERSION
+            async function deleteDataset(datasetName) {
+                if (!confirm(`Delete dataset "${datasetName}"? This cannot be undone!`)) {
+                    return;
+                }
+
+                try {
+                    showNotification(`Deleting ${datasetName}...`, 'info');
+
+                    const response = await fetch('/api/manage-datasets', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'delete',
+                            dataset_name: datasetName
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    console.log("Delete dataset result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Reload datasets and stats
+                        setTimeout(() => {
+                            loadDatasets();
+                            loadStats();
+
+                            // If current dataset was deleted, clear the view
+                            const currentDataset = document.getElementById('dataset-select').value;
+                            if (currentDataset === datasetName) {
+                                document.getElementById('dataset-select').value = '';
+                                const tbody = document.getElementById('data-table-body');
+                                const thead = document.getElementById('data-table-head');
+                                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 20px;">Please select a dataset</td></tr>';
+                                thead.innerHTML = '';
+                            }
+                        }, 1000);
+
+                    } else {
+                        showNotification(result.message || 'Failed to delete dataset', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting dataset:', error);
+                    showNotification('Error deleting dataset: ' + error.message, 'error');
+                }
+            }
+
+            // Update the deletePrediction function
+            async function deletePrediction(predictionId) {
+                if (!confirm('Are you sure you want to delete this prediction?')) {
+                    return;
+                }
+
+                try {
+                    console.log(`Deleting prediction: ${predictionId}`);
+
+                    const response = await fetch(`/api/prediction/${predictionId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    console.log("Delete prediction result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Reload predictions
+                        setTimeout(() => {
+                            loadPredictions();
+                        }, 500);
+
+                    } else {
+                        showNotification(result.message || 'Failed to delete prediction', 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error deleting prediction:', error);
+                    showNotification('Error deleting prediction: ' + error.message, 'error');
+                }
+            }
+
+            // Update the clearPredictions function
+            async function clearPredictions() {
+                if (!confirm('Are you sure you want to clear all prediction history? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    console.log("Clearing all predictions...");
+                    showNotification('Clearing predictions...', 'info');
+
+                    const response = await fetch('/api/clear-predictions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    console.log("Clear predictions result:", result);
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Reload predictions to show empty state
+                        setTimeout(() => {
+                            loadPredictions();
+                            loadStats(); // Also refresh stats
+                        }, 500);
+
+                    } else {
+                        showNotification(result.message || 'Failed to clear predictions', 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error clearing predictions:', error);
+                    showNotification('Error clearing predictions: ' + error.message, 'error');
+                }
+            }
+
+            // Delete dataset
+            async function deleteDataset(datasetName) {
+                if (!confirm(`Delete dataset "${datasetName}"? This cannot be undone!`)) {
+                    return;
+                }
+
+                try {
+                    showNotification(`Deleting ${datasetName}...`, 'info');
+
+                    const response = await fetch('/api/manage-datasets', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            action: 'delete',
+                            dataset_name: datasetName
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+
+                        // Reload datasets
+                        setTimeout(() => {
+                            loadDatasets();
+                            loadStats();
+                        }, 1000);
+
+                    } else {
+                        showNotification(result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error deleting dataset:', error);
+                    showNotification('Error deleting dataset', 'error');
+                }
+            }
+
+            // Load metrics from API
+            async function loadMetrics() {
+                try {
+                    console.log("Loading metrics from API...");
+                    const response = await fetch('/api/metrics');
+
+                    if (!response.ok) {
+                        console.error(`API Error: ${response.status}`);
+                        // Use default metrics
+                        metrics = [
+                            { value: 'temperature', label: 'Temperature' },
+                            { value: 'co2_emissions', label: 'CO2 Emissions' },
+                            { value: 'forest_area', label: 'Forest Area' },
+                            { value: 'population', label: 'Population' }
+                        ];
+                    } else {
+                        metrics = await response.json();
+                    }
+
+                    console.log(`Received ${metrics.length} metrics`);
+
+                    // Populate metric select elements
+                    ['quick-metric'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (!select) {
+                            console.error(`Element #${id} not found`);
+                            return;
+                        }
+
+                        select.innerHTML = '<option value="">Select Metric</option>';
+                        metrics.forEach(metric => {
+                            const option = document.createElement('option');
+                            option.value = metric.value;
+                            option.textContent = metric.label;
+                            select.appendChild(option);
+                        });
+                    });
+
+                    console.log("Metrics loaded successfully");
+                } catch (error) {
+                    console.error('Error loading metrics:', error);
+                    showNotification('Error loading metrics', 'error');
+                }
+            }
+
+            // Load system statistics
+            async function loadStats() {
+                try {
+                    console.log("Loading statistics...");
+                    const response = await fetch('/api/stats');
+
+                    if (!response.ok) {
+                        console.error(`Stats API Error: ${response.status}`);
+                        const container = document.getElementById('stats-container');
+                        container.innerHTML = `
+                    <div class="stat-box">
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Total Records</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Datasets</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">0</div>
+                        <div class="stat-label">Predictions</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">-</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                `;
+                        return;
+                    }
+
+                    const stats = await response.json();
+                    console.log("Statistics received:", stats);
+
+                    const container = document.getElementById('stats-container');
+
+                    container.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${stats.total_records || 0}</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.total_datasets || 0}</div>
+                    <div class="stat-label">Datasets</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.total_predictions || 0}</div>
+                    <div class="stat-label">Predictions</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${stats.system_status || '✓'}</div>
+                    <div class="stat-label">Status</div>
+                </div>
+            `;
+
+                    console.log("Statistics displayed successfully");
+                } catch (error) {
+                    console.error('Error loading statistics:', error);
+                    showNotification('Error loading statistics', 'error');
+                }
+            }
+
+            // Make quick prediction
+            async function makeQuickPrediction() {
+                const metric = document.getElementById('quick-metric').value;
+                const year = document.getElementById('quick-year').value;
+
+                console.log(`Quick Prediction - Metric: ${metric}, Year: ${year}`);
+
+                if (!metric || !year) {
+                    showNotification('Please fill all fields', 'error');
+                    return;
+                }
+
+                await makePredictionRequest(null, metric, year, 'quick-result', 'quick');
+            }
+
+            // Make standard prediction
+            async function makePrediction() {
+                const dataset = document.getElementById('prediction-dataset').value;
+                const column = document.getElementById('prediction-column').value;
+                const year = document.getElementById('prediction-year').value;
+
+                console.log(`Standard Prediction - Dataset: ${dataset}, Column: ${column}, Year: ${year}`);
+
+                if (!dataset || !column || !year) {
+                    showNotification('Please fill all fields', 'error');
+                    return;
+                }
+
+                await makePredictionRequest(dataset, column, year, 'prediction-result', 'standard');
+            }
+
+            // Make prediction request to API
+            async function makePredictionRequest(dataset, metric, year, resultElementId, predictionType = 'standard') {
+                try {
+                    console.log(`Making ${predictionType} prediction request...`);
+
+                    const response = await fetch('/api/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            dataset: dataset,
+                            metric: metric,
+                            target_year: parseInt(year),
+                            prediction_type: predictionType
+                        })
+                    });
+
+                    const result = await response.json();
+                    console.log("Prediction result:", result);
+
+                    if (result.success) {
+                        const resultDiv = document.getElementById(resultElementId);
+
+                        let html = `
+                    <div class="prediction-result">
+                        <h4>✅ Prediction Successful</h4>
+                        <p><strong>Type:</strong> ${predictionType === 'quick' ? 'Quick Prediction' : 'Standard Prediction'}</p>
+                `;
+
+                        if (dataset) {
+                            html += `<p><strong>Dataset:</strong> ${dataset}</p>`;
+                        }
+
+                        html += `
+                        <p><strong>Metric:</strong> ${metric}</p>
+                        <p><strong>Year:</strong> ${year}</p>
+                        <p><strong>Predicted Value:</strong> <span style="color: #4361ee; font-size: 1.2em;">${result.prediction?.toFixed(4) || 'N/A'}</span></p>
+                `;
+
+                        if (result.accuracy !== undefined) {
+                            html += `<p><strong>Model Accuracy:</strong> <span style="color: ${result.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">${(result.accuracy * 100).toFixed(2)}%</span></p>`;
+                        }
+
+                        html += `
+                        <p><strong>Data Points Used:</strong> ${result.data_points || 0}</p>
+                    </div>
+                `;
+                        resultDiv.innerHTML = html;
+
+                        showNotification(`${predictionType === 'quick' ? 'Quick' : 'Standard'} prediction saved to history!`, 'success');
+
+                        // Refresh predictions in history tab
+                        setTimeout(() => {
+                            loadPredictions();
+                            loadStats();
+                        }, 1000);
+                    } else {
+                        showNotification(result.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error making prediction:', error);
+                    showNotification('Error making prediction. Check console.', 'error');
+                }
+            }
+
+            // Load prediction history
+            async function loadPredictions() {
+                try {
+                    console.log("Loading predictions history...");
+
+                    const response = await fetch('/api/predictions');
+                    const predictions = await response.json();
+
+                    const quickPredictionsTable = document.getElementById('quick-predictions-table-body');
+                    const standardPredictionsTable = document.getElementById('standard-predictions-table-body');
+
+                    // Clear tables
+                    quickPredictionsTable.innerHTML = '';
+                    standardPredictionsTable.innerHTML = '';
+
+                    // Separate predictions
+                    const quickPreds = predictions.filter(p => p.prediction_type === 'quick');
+                    const standardPreds = predictions.filter(p => p.prediction_type === 'standard');
+
+                    // Load Quick Predictions (Table 1)
+                    if (quickPreds.length === 0) {
+                        quickPredictionsTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: #666;">
+                            No quick predictions yet. Try making one from the Dashboard tab!
+                        </td>
+                    </tr>
+                `;
+                    } else {
+                        quickPreds.forEach(pred => {
+                            const row = quickPredictionsTable.insertRow();
+                            const date = new Date(pred.prediction_date);
+
+                            row.innerHTML = `
+                        <td>${date.toLocaleString()}</td>
+                        <td>${pred.predicted_metric}</td>
+                        <td>${pred.year}</td>
+                        <td>${parseFloat(pred.predicted_value).toFixed(4)}</td>
+                        <td style="color: ${pred.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">
+                            ${(pred.accuracy * 100).toFixed(2)}%
+                        </td>
+                        <td>${pred.dataset || 'forest_data'}</td>
+                        <td>
+                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                        });
+                    }
+
+                    // Load Standard Predictions (Table 2)
+                    if (standardPreds.length === 0) {
+                        standardPredictionsTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 30px; color: #666;">
+                            No standard predictions yet. Try making one from the Make Predictions tab!
+                        </td>
+                    </tr>
+                `;
+                    } else {
+                        standardPreds.forEach(pred => {
+                            const row = standardPredictionsTable.insertRow();
+                            const date = new Date(pred.prediction_date);
+
+                            row.innerHTML = `
+                        <td>${date.toLocaleString()}</td>
+                        <td>${pred.dataset || 'forest_data'}</td>
+                        <td>${pred.predicted_metric}</td>
+                        <td>${pred.year}</td>
+                        <td>${parseFloat(pred.predicted_value).toFixed(4)}</td>
+                        <td style="color: ${pred.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">
+                            ${(pred.accuracy * 100).toFixed(2)}%
+                        </td>
+                        <td>
+                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                        });
+                    }
+
+                    // Update prediction counts
+                    document.getElementById('quick-pred-count').textContent = quickPreds.length;
+                    document.getElementById('standard-pred-count').textContent = standardPreds.length;
+                    document.getElementById('total-pred-count').textContent = predictions.length;
+
+                } catch (error) {
+                    console.error('Error loading predictions:', error);
+                    showNotification('Error loading predictions', 'error');
+                }
+            }
+
+            // Refresh statistics
+            function refreshStats() {
+                console.log("Refreshing statistics...");
+                loadStats();
+                showNotification('Statistics refreshed', 'success');
+            }
+
+            // Prediction step navigation
+            function nextStep(step) {
+                document.querySelectorAll('.prediction-step').forEach(step => {
+                    step.classList.remove('active');
+                });
+                document.getElementById(`step-${step}`).classList.add('active');
+                currentStep = step;
+            }
+
+            function prevStep(step) {
+                document.querySelectorAll('.prediction-step').forEach(step => {
+                    step.classList.remove('active');
+                });
+                document.getElementById(`step-${step}`).classList.add('active');
+                currentStep = step;
+            }
+
+            function resetPredictionSteps() {
+                document.querySelectorAll('.prediction-step').forEach(step => {
+                    step.classList.remove('active');
+                });
+                document.getElementById('step-1').classList.add('active');
+                currentStep = 1;
+            }
+
+            // Delete a prediction
+            async function deletePrediction(predictionId) {
+                if (!confirm('Are you sure you want to delete this prediction?')) {
+                    return;
+                }
+
+                try {
+                    console.log(`Deleting prediction: ${predictionId}`);
+
+                    const response = await fetch(`/api/prediction/${predictionId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showNotification('Prediction deleted successfully', 'success');
+
+                        // Reload predictions
+                        setTimeout(() => {
+                            loadPredictions();
+                        }, 500);
+
+                    } else {
+                        showNotification(`Failed to delete prediction: ${result.message}`, 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error deleting prediction:', error);
+                    showNotification('Error deleting prediction', 'error');
+                }
+            }
+
+            // Clear all predictions
+            async function clearPredictions() {
+                if (!confirm('Are you sure you want to clear all prediction history? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    console.log("Clearing all predictions...");
+                    showNotification('Clearing predictions...', 'info');
+
+                    const response = await fetch('/api/clear-predictions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showNotification('All predictions cleared successfully', 'success');
+
+                        // Reload predictions to show empty state
+                        setTimeout(() => {
+                            loadPredictions();
+                        }, 500);
+
+                    } else {
+                        showNotification(`Failed to clear predictions: ${result.message}`, 'error');
+                    }
+
+                } catch (error) {
+                    console.error('Error clearing predictions:', error);
+                    showNotification('Error clearing predictions', 'error');
+                }
+            }
+
+            // Initialize charts
+            function initializeCharts() {
+                console.log("Initializing charts...");
+
+                const chartConfigs = {
+                    temperatureChart: {
+                        type: 'line',
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Temperature Trends',
+                                    font: { size: 16 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Year'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Temperature (°C)'
+                                    },
+                                    beginAtZero: false
+                                }
+                            }
+                        }
+                    },
+                    co2ForestChart: {
+                        type: 'scatter',
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'CO2 vs Forest Area',
+                                    font: { size: 16 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'CO2 Emissions'
+                                    },
+                                    beginAtZero: true
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Forest Area'
+                                    },
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    },
+                    populationChart: {
+                        type: 'line',
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Population Growth',
+                                    font: { size: 16 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Year'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Population'
+                                    },
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    },
+                    distributionChart: {
+                        type: 'bar',
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Data Distribution',
+                                    font: { size: 16 }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Category'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Count'
+                                    },
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    },
+                    customChart: {
+                        type: 'line',
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Custom Visualization',
+                                    font: { size: 16 }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // Initialize each chart
+                for (const [canvasId, config] of Object.entries(chartConfigs)) {
+                    const canvas = document.getElementById(canvasId);
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        charts[canvasId] = new Chart(ctx, {
+                            type: config.type,
+                            data: {
+                                labels: ['Loading...'],
+                                datasets: [{
+                                    data: [1],
+                                    backgroundColor: ['#f0f0f0']
+                                }]
+                            },
+                            options: config.options
+                        });
+                        console.log(`✓ Initialized chart: ${canvasId}`);
+                    } else {
+                        console.warn(`✗ Canvas element not found: ${canvasId}`);
+                    }
+                }
+            }
+
+            // Load chart data
+            async function loadChartData() {
+                console.log("Loading all chart data...");
+
+                try {
+                    await loadTemperatureChartData();
+                    await loadCo2ForestChartData();
+                    await loadPopulationChartData();
+                    await loadDistributionChartData();
+
+                    console.log("All charts loaded successfully");
+                } catch (error) {
+                    console.error("Error loading chart data:", error);
+                    showNotification('Error loading charts. Data may not be loaded yet.', 'error');
+                }
+            }
+
+            // Load temperature chart data
+            async function loadTemperatureChartData() {
+                try {
+                    console.log("Loading temperature chart data...");
+
+                    const response = await fetch('/api/chart-data?type=temperature_trend');
+
+                    if (!response.ok) {
+                        console.error(`Temperature chart API error: ${response.status}`);
+                        showEmptyChart('temperatureChart', 'Temperature Data Not Available');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log("Temperature chart data received:", result);
+
+                    if (!charts.temperatureChart) {
+                        console.error("Temperature chart not initialized");
+                        return;
+                    }
+
+                    if (!result.success || !result.data || result.data.length === 0) {
+                        console.warn("No temperature data available");
+                        showEmptyChart('temperatureChart', 'No Temperature Data Available');
+                        return;
+                    }
+
+                    const data = result.data;
+
+                    // Update chart
+                    charts.temperatureChart.data.labels = data.map(d => d.year || d.label);
+                    charts.temperatureChart.data.datasets = [{
+                        label: 'Temperature (°C)',
+                        data: data.map(d => d.value || d.temperature || 0),
+                        borderColor: '#ff6384',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }];
+
+                    charts.temperatureChart.update();
+                    console.log("Temperature chart updated successfully");
+
+                } catch (error) {
+                    console.error('Error loading temperature chart:', error);
+                    showEmptyChart('temperatureChart', 'Error Loading Temperature Data');
+                }
+            }
+
+            // Load CO2 vs Forest Area chart
+            async function loadCo2ForestChartData() {
+                try {
+                    console.log("Loading CO2 vs Forest chart data...");
+
+                    const response = await fetch('/api/chart-data?type=co2_vs_forest');
+
+                    if (!response.ok) {
+                        console.error(`CO2 chart API error: ${response.status}`);
+                        showEmptyChart('co2ForestChart', 'CO2 vs Forest Data Not Available');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log("CO2 chart data received:", result);
+
+                    if (!charts.co2ForestChart) {
+                        console.error("CO2 chart not initialized");
+                        return;
+                    }
+
+                    if (!result.success || !result.data || result.data.length === 0) {
+                        console.warn("No CO2 vs Forest data available");
+                        showEmptyChart('co2ForestChart', 'No CO2 vs Forest Data Available');
+                        return;
+                    }
+
+                    const data = result.data;
+
+                    // Update chart
+                    charts.co2ForestChart.data.datasets = [{
+                        label: 'CO2 vs Forest',
+                        data: data.map(d => ({
+                            x: d.co2 || d.x || 0,
+                            y: d.forest || d.y || 0
+                        })),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: '#36a2eb',
+                        pointRadius: 6
+                    }];
+
+                    charts.co2ForestChart.update();
+                    console.log("CO2 chart updated successfully");
+
+                } catch (error) {
+                    console.error('Error loading CO2 chart:', error);
+                    showEmptyChart('co2ForestChart', 'Error Loading CO2 vs Forest Data');
+                }
+            }
+
+            // Load population chart
+            async function loadPopulationChartData() {
+                try {
+                    console.log("Loading population chart data...");
+
+                    const response = await fetch('/api/chart-data?type=population_growth');
+
+                    if (!response.ok) {
+                        console.error(`Population chart API error: ${response.status}`);
+                        showEmptyChart('populationChart', 'Population Data Not Available');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log("Population chart data received:", result);
+
+                    if (!charts.populationChart) {
+                        console.error("Population chart not initialized");
+                        return;
+                    }
+
+                    if (!result.success || !result.data || result.data.length === 0) {
+                        console.warn("No population data available");
+                        showEmptyChart('populationChart', 'No Population Data Available');
+                        return;
+                    }
+
+                    const data = result.data;
+
+                    // Update chart
+                    charts.populationChart.data.labels = data.map(d => d.year || d.label);
+                    charts.populationChart.data.datasets = [{
+                        label: 'Population',
+                        data: data.map(d => d.value || d.population || 0),
+                        borderColor: '#36a2eb',
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }];
+
+                    charts.populationChart.update();
+                    console.log("Population chart updated successfully");
+
+                } catch (error) {
+                    console.error('Error loading population chart:', error);
+                    showEmptyChart('populationChart', 'Error Loading Population Data');
+                }
+            }
+
+            // Load distribution chart
+            async function loadDistributionChartData() {
+                try {
+                    console.log("Loading distribution chart data...");
+                    const response = await fetch('/api/chart-data?type=data_distribution');
+
+                    if (!response.ok) {
+                        console.error(`Distribution chart API error: ${response.status}`);
+                        showEmptyChart('distributionChart', 'Distribution Data Not Available');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    console.log("Distribution chart data received:", result);
+
+                    if (!charts.distributionChart) {
+                        console.error("Distribution chart not initialized");
+                        return;
+                    }
+
+                    if (!result.success || !result.data || result.data.length === 0) {
+                        console.warn("No distribution data available");
+                        showEmptyChart('distributionChart', 'No Distribution Data Available');
+                        return;
+                    }
+
+                    const data = result.data;
+
+                    // Update chart
+                    charts.distributionChart.data.labels = data.map(d => d.label || d.category);
+                    charts.distributionChart.data.datasets = [{
+                        label: 'Count',
+                        data: data.map(d => d.value || d.count),
+                        backgroundColor: [
+                            '#ff6384', '#36a2eb', '#ffce56', '#4bc0c0',
+                            '#9966ff', '#ff9f40', '#8ac926', '#1982c4'
+                        ]
+                    }];
+
+                    charts.distributionChart.update();
+                    console.log("Distribution chart updated successfully");
+
+                } catch (error) {
+                    console.error('Error loading distribution chart:', error);
+                    showEmptyChart('distributionChart', 'Error Loading Distribution Data');
+                }
+            }
+
+            // Update custom chart
+            async function updateChart() {
+                const datasetName = document.getElementById('chart-dataset').value;
+                const chartType = document.getElementById('chart-type').value;
+                const xAxis = document.getElementById('chart-x-axis').value;
+                const yAxis = document.getElementById('chart-y-axis').value;
+
+                if (!datasetName || !xAxis || !yAxis) {
+                    console.log("Missing required parameters for chart");
+                    showNotification("Please select dataset, X-axis and Y-axis columns", 'warning');
+                    return;
+                }
+
+                console.log(`Updating custom chart: ${datasetName}, Type: ${chartType}, X: ${xAxis}, Y: ${yAxis}`);
+
+                try {
+                    // Load dataset data directly
+                    const response = await fetch(`/api/dataset/${datasetName}`);
+
+                    if (!response.ok) {
+                        console.error(`Dataset API error: ${response.status}`);
+                        showNotification(`Failed to load dataset data`, 'error');
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    if (!result.success || !result.data || result.data.length === 0) {
+                        console.warn("No visualization data available");
+                        showEmptyChart('customChart', `No data available in ${datasetName}`);
+                        showNotification(`No data available in selected dataset`, 'warning');
+                        return;
+                    }
+
+                    const data = result.data;
+
+                    // Prepare data for chart
+                    const chartData = [];
+                    data.forEach(row => {
+                        if (row[xAxis] !== undefined && row[yAxis] !== undefined) {
+                            chartData.push({
+                                x: row[xAxis],
+                                y: parseFloat(row[yAxis]) || 0
+                            });
+                        }
+                    });
+
+                    if (chartData.length === 0) {
+                        showEmptyChart('customChart', `No valid data for ${xAxis} vs ${yAxis}`);
+                        showNotification(`Selected columns have no valid data`, 'warning');
+                        return;
+                    }
+
+                    // Update chart
+                    charts.customChart.config.type = chartType;
+                    charts.customChart.options.plugins.title.text = `${xAxis} vs ${yAxis}`;
+                    charts.customChart.data.labels = [];
+                    charts.customChart.data.datasets = [];
+
+                    if (chartType === 'pie') {
+                        // For pie chart, aggregate by x-axis
+                        const aggregated = {};
+                        chartData.forEach(d => {
+                            const key = String(d.x);
+                            aggregated[key] = (aggregated[key] || 0) + d.y;
+                        });
+
+                        const labels = Object.keys(aggregated).slice(0, 10);
+                        const values = labels.map(label => aggregated[label]);
+
+                        charts.customChart.data.labels = labels;
+                        charts.customChart.data.datasets = [{
+                            label: yAxis,
+                            data: values,
+                            backgroundColor: labels.map((_, i) =>
+                                `hsl(${(i * 360) / labels.length}, 70%, 60%)`
+                            )
+                        }];
+                    } else if (chartType === 'scatter') {
+                        charts.customChart.data.datasets = [{
+                            label: `${xAxis} vs ${yAxis}`,
+                            data: chartData,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: '#36a2eb',
+                            pointRadius: 6
+                        }];
+                    } else {
+                        // For line/bar/area charts
+                        const sortedData = chartData.sort((a, b) => a.x - b.x);
+                        charts.customChart.data.labels = sortedData.map(d => d.x);
+                        charts.customChart.data.datasets = [{
+                            label: yAxis,
+                            data: sortedData.map(d => d.y),
+                            borderColor: '#4361ee',
+                            backgroundColor: chartType === 'bar' ? '#4361ee' : 'rgba(67, 97, 238, 0.2)',
+                            fill: chartType === 'area',
+                            tension: 0.1
+                        }];
+                    }
+
+                    charts.customChart.update();
+                    console.log("Custom chart updated successfully");
+                    showNotification(`Chart updated: ${xAxis} vs ${yAxis}`, 'success');
+
+                } catch (error) {
+                    console.error('Error updating chart:', error);
+                    showEmptyChart('customChart', 'Error Loading Chart Data');
+                    showNotification('Error loading chart data', 'error');
+                }
+            }
+
+            // Helper function to show empty chart message
+            function showEmptyChart(chartId, message) {
+                if (charts[chartId]) {
+                    charts[chartId].data.labels = [message];
+                    charts[chartId].data.datasets = [{
+                        data: [1],
+                        backgroundColor: ['#f0f0f0'],
+                        borderColor: '#cccccc',
+                        borderWidth: 1
+                    }];
+                    charts[chartId].update();
+                }
+            }
+
+            // Show notification
+            function showNotification(message, type = 'success') {
+                console.log(`Notification [${type}]: ${message}`);
+
+                // Remove any existing notifications
+                document.querySelectorAll('.notification').forEach(n => n.remove());
+
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    notification.style.animation = 'slideIn 0.3s ease reverse';
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+
+            // Add styles for prediction steps
+            const style = document.createElement('style');
+            style.textContent = `
+        .prediction-step {
+            display: none;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+        .prediction-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        .prediction-step h4 {
+            color: #4361ee;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+    `;
+            document.head.appendChild(style);
+        </script>
+</body>
+
+</html>

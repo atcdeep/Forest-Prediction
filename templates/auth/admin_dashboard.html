@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Forest Prediction System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ===== GLOBAL STYLES ===== */
+        :root {
+            --primary: #4361ee;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #118ab2;
+            --purple: #9d4edd;
+            --orange: #ff7b00;
+            --dark: #212529;
+            --light: #f8f9fa;
+
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== ANIMATED BACKGROUND ===== */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .bg-element {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.7;
+            filter: blur(40px);
+            animation: float 15s infinite linear;
+        }
+
+        .bg-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #4361ee33 0%, transparent 70%);
+            top: 10%;
+            left: 5%;
+            animation-delay: 0s;
+        }
+
+        .bg-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #7209b733 0%, transparent 70%);
+            top: 60%;
+            right: 10%;
+            animation-delay: -5s;
+        }
+
+        .bg-3 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, #06d6a033 0%, transparent 70%);
+            bottom: 20%;
+            left: 15%;
+            animation-delay: -8s;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(30px, -40px) scale(1.1);
+            }
+
+            66% {
+                transform: translate(-20px, 20px) scale(0.9);
+            }
+        }
+
+        /* ===== DASHBOARD CONTAINER ===== */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* ===== SIDEBAR STYLES ===== */
+        .sidebar {
+            width: 280px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px 20px;
+            position: sticky;
+            top: 20px;
+            height: calc(100vh - 40px);
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            padding-bottom: 30px;
+            border-bottom: 2px solid rgba(67, 97, 238, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .sidebar-header i {
+            font-size: 3rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.5rem;
+            color: var(--dark);
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .sidebar-header p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        .admin-badge {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 50px;
+            display: inline-block;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(6, 214, 160, 0.2);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 10px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #64748b;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(114, 9, 183, 0.1));
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        /* ===== TOP BAR ===== */
+        .top-bar {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 20px 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .top-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success), var(--warning));
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            100% {
+                background-position: 200% 50%;
+            }
+        }
+
+        .page-title h2 {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .page-title p {
+            color: #64748b;
+            margin-top: 5px;
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logout-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, var(--danger), #e63946);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(239, 71, 111, 0.2);
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 71, 111, 0.3);
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 8px;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 4px 0 0 4px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-info h3 {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        .stat-icon i {
+            font-size: 1.8rem;
+            color: white;
+        }
+
+        /* ===== CHARTS GRID ===== */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .chart-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-header h3 {
+            color: var(--dark);
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .chart-header i {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        /* ===== USERS SECTION / TABLES ===== */
+        .users-section {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-header h3 {
+            color: var(--dark);
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h3::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 2px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .refresh-btn,
+        .export-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        .export-btn {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+            color: white;
+            box-shadow: 0 4px 15px rgba(6, 214, 160, 0.2);
+        }
+
+        .refresh-btn:hover,
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(67, 97, 238, 0.3);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 1000px;
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 18px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th:first-child {
+            border-radius: 12px 0 0 0;
+        }
+
+        th:last-child {
+            border-radius: 0 12px 0 0;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #475569;
+            transition: all 0.2s ease;
+        }
+
+        tr:hover td {
+            background: rgba(67, 97, 238, 0.05);
+            transform: translateX(4px);
+        }
+
+        /* ===== USER INFO COMPONENT ===== */
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.2);
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .user-email {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* ===== BADGES ===== */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            text-transform: capitalize;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, var(--warning), #ff7b00);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, var(--info), #0d6efd);
+            color: white;
+        }
+
+        /* ===== ACTION BUTTONS ===== */
+        .action-btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 3px;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .action-btn.view {
+            background: linear-gradient(135deg, var(--info), #0d6efd);
+            color: white;
+        }
+
+        .action-btn.delete {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ===== SEARCH AND FILTER ===== */
+        .search-box {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 14px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+
+        .filter-select {
+            padding: 14px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            min-width: 180px;
+            background: white;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%234361ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 18px;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* ===== STATS SUMMARY ===== */
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #f8f9ff, #ffffff);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .summary-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .summary-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 5px;
+        }
+
+        .summary-label {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        /* ===== MODAL STYLES ===== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 1000px;
+            width: 95%;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .modal-header h3 {
+            color: var(--dark);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: #64748b;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        .close-btn:hover {
+            background: #f1f5f9;
+            color: var(--danger);
+        }
+
+        /* ===== ACTIVITY ITEMS ===== */
+        .activity-item {
+            padding: 20px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+        .activity-item:hover {
+            background: rgba(67, 97, 238, 0.05);
+            transform: translateX(5px);
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .activity-time {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .activity-desc {
+            color: var(--dark);
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #f1f5f9;
+            border-top-color: var(--primary);
+            border-right-color: var(--secondary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ===== ALERT NOTIFICATIONS ===== */
+        .alert {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            padding: 18px 28px;
+            border-radius: 16px;
+            color: white;
+            font-weight: 600;
+            z-index: 3000;
+            animation: slideInRight 0.3s ease;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, var(--success), #0cb48a);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, var(--danger), #e63946);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, var(--info), #0d6efd);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* ===== ADMIN TABS ===== */
+        .admin-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            background: white;
+            padding: 10px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .admin-tab {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.3s ease;
+            background: white;
+            font-size: 0.95rem;
+        }
+
+        .admin-tab:hover {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+
+        .admin-tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
+        }
+
+        /* ===== DATASET VIEW MODAL SPECIFIC ===== */
+        #datasetViewModal .modal-content {
+            max-width: 1200px;
+            width: 95%;
+        }
+
+        #datasetViewModal table {
+            font-size: 0.9rem;
+        }
+
+        #datasetViewModal th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #datasetViewModal td {
+            max-width: 250px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #datasetViewModal tr:hover td {
+            background: rgba(67, 97, 238, 0.08) !important;
+        }
+
+        /* ===== SCROLLBAR STYLES ===== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to bottom, #3a56d4, #6300a8);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                flex-direction: column;
+                padding: 15px;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                top: 0;
+                margin-bottom: 20px;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                height: 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-bar {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+
+            .admin-profile {
+                width: 100%;
+            }
+
+            .logout-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-controls {
+                width: 100%;
+            }
+
+            .refresh-btn,
+            .export-btn {
+                flex: 1;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                height: 350px;
+                padding: 20px;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+                margin: 10px;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .filter-select {
+                width: 100%;
+            }
+
+            .admin-tabs {
+                flex-direction: column;
+            }
+
+            .admin-tab {
+                width: 100%;
+            }
+
+            #datasetViewModal .modal-content {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                margin: 0;
+                border-radius: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+
+            .sidebar {
+                padding: 20px 15px;
+            }
+
+            .top-bar,
+            .card,
+            .chart-card,
+            .users-section {
+                padding: 20px;
+            }
+
+            .stat-number {
+                font-size: 1.8rem;
+            }
+
+            .stat-icon {
+                width: 50px;
+                height: 50px;
+            }
+
+            .stat-icon i {
+                font-size: 1.4rem;
+            }
+
+            .action-btn {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+            }
+
+            .summary-card {
+                padding: 15px;
+            }
+
+            .summary-value {
+                font-size: 1.5rem;
+            }
+
+            .alert {
+                left: 20px;
+                right: 20px;
+                max-width: none;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .bg-gradient {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .shadow-hover {
+            transition: all 0.3s ease;
+        }
+
+        .shadow-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        /* ===== EMPTY STATE STYLES ===== */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            color: var(--dark);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-tree"></i>
+                <h3>Admin Panel</h3>
+                <p>Forest Prediction System</p>
+                <span class="admin-badge">Administrator</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link active" onclick="showSection('dashboard')">
+                        <i class="fas fa-tachometer-alt"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('users')">
+                        <i class="fas fa-users"></i>
+                        Users
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('predictions')">
+                        <i class="fas fa-chart-line"></i>
+                        All Predictions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('datasets')">
+                        <i class="fas fa-database"></i>
+                        All Datasets
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('activity')">
+                        <i class="fas fa-history"></i>
+                        Activity Log
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('system')">
+                        <i class="fas fa-cog"></i>
+                        System Stats
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h2>Admin Dashboard</h2>
+                    <p>Welcome back, Administrator</p>
+                </div>
+                <div class="admin-profile">
+                    <button class="logout-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="tab-content" style="display: block;">
+                <!-- Stats Cards -->
+                <div class="stats-grid" id="statsContainer">
+                    <!-- Stats will be loaded here -->
+                </div>
+
+                <!-- Recent Users -->
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>Recent Users</h3>
+                        <button class="refresh-btn" onclick="loadRecentUsers()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container" id="recentUsersTable">
+                        <!-- Users table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="users-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>All Users</h3>
+                        <div class="header-controls">
+                            <button class="refresh-btn" onclick="loadAllUsers()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container" id="allUsersTable">
+                        <!-- All users table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Predictions Section -->
+            <div id="predictions-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>All Predictions Across All Users</h3>
+                        <div class="header-controls">
+                            <button class="refresh-btn" onclick="loadAllPredictions()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button class="export-btn" onclick="exportPredictions()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filter -->
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="predictionSearch"
+                            placeholder="Search by user, email, dataset, metric..." onkeyup="filterPredictions()">
+                        <select class="filter-select" id="predictionTypeFilter" onchange="filterPredictions()">
+                            <option value="">All Types</option>
+                            <option value="quick">Quick Predictions</option>
+                            <option value="standard">Standard Predictions</option>
+                        </select>
+                    </div>
+
+                    <!-- Stats Summary -->
+                    <div class="stats-summary" id="predictionStats">
+                        <!-- Stats will be loaded here -->
+                    </div>
+
+                    <div class="table-container" id="allPredictionsTable">
+                        <!-- All predictions table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datasets Section -->
+            <div id="datasets-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>All Datasets Across All Users</h3>
+                        <div class="header-controls">
+                            <button class="refresh-btn" onclick="loadAllDatasets()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="datasetSearch"
+                            placeholder="Search by user, email, dataset name..." onkeyup="filterDatasets()">
+                    </div>
+
+                    <div class="table-container" id="allDatasetsTable">
+                        <!-- All datasets table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Section -->
+            <div id="activity-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>Recent User Activity</h3>
+                        <button class="refresh-btn" onclick="loadAllActivity()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="table-container" id="activityTable">
+                        <!-- Activity table will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Stats Section -->
+            <div id="system-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <h3>System Statistics</h3>
+                    <div class="stats-grid" id="systemStatsContainer">
+                        <!-- System stats will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- User Activity Modal -->
+    <div class="modal" id="activityModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>User Activity Log</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalContent">
+                <!-- Activity will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Dataset View Modal -->
+    <div class="modal" id="datasetViewModal">
+        <!-- Content will be dynamically added -->
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        let activityChart, activityTypeChart;
+        let allPredictions = [];
+        let allDatasets = [];
+
+        // Check admin session
+        async function checkAdminSession() {
+            try {
+                const response = await fetch('/api/auth/check-session');
+                const data = await response.json();
+
+                if (!data.authenticated || data.user.role !== 'admin') {
+                    console.log("Not authenticated as admin, redirecting...");
+                    window.location.href = '/admin-auth';
+                } else {
+                    console.log("Admin authenticated:", data.user);
+                }
+            } catch (error) {
+                console.error('Session check error:', error);
+                window.location.href = '/admin-auth';
+            }
+        }
+
+        // Run check on load
+        checkAdminSession();
+
+        // Tab switching
+        function showSection(section) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+
+            event.currentTarget.classList.add('active');
+            document.getElementById(section + '-section').style.display = 'block';
+
+            // Load section data
+            switch (section) {
+                case 'dashboard':
+                    loadDashboardStats();
+                    loadRecentUsers();
+                    break;
+                case 'users':
+                    loadAllUsers();
+                    break;
+                case 'predictions':
+                    loadAllPredictions();
+                    break;
+                case 'datasets':
+                    loadAllDatasets();
+                    break;
+                case 'activity':
+                    loadAllActivity();
+                    break;
+                case 'system':
+                    loadSystemStats();
+                    break;
+            }
+        }
+
+        // Load dashboard stats
+        async function loadDashboardStats() {
+            try {
+                showLoading();
+                console.log("Loading dashboard stats...");
+                const response = await fetch('/api/admin/dashboard-stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log("Dashboard stats loaded:", data.stats);
+                    displayStats(data.stats);
+                    updateCharts(data.stats);
+                } else {
+                    showAlert('Error loading dashboard stats', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                showAlert('Error loading dashboard stats', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayStats(stats) {
+            const statsContainer = document.getElementById('statsContainer');
+            if (!statsContainer) return;
+
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Users</h3>
+                        <div class="stat-number">${stats.users.total}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Active Users</h3>
+                        <div class="stat-number">${stats.users.active}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Predictions</h3>
+                        <div class="stat-number">${stats.system.total_predictions}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Datasets</h3>
+                        <div class="stat-number">${stats.system.total_datasets}</div>
+                    </div>
+                    <div class="stat-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateCharts(stats) {
+            // Activity Chart
+            if (activityChart) activityChart.destroy();
+            const ctx1 = document.getElementById('activityChart');
+            if (ctx1) {
+                activityChart = new Chart(ctx1.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: stats.activity.by_day.map(d => d.date),
+                        datasets: [{
+                            label: 'User Activities',
+                            data: stats.activity.by_day.map(d => d.count),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Activity Type Chart
+            if (activityTypeChart) activityTypeChart.destroy();
+            const ctx2 = document.getElementById('activityTypeChart');
+            if (ctx2) {
+                activityTypeChart = new Chart(ctx2.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: stats.activity.by_type.map(t => t.activity_type),
+                        datasets: [{
+                            data: stats.activity.by_type.map(t => t.count),
+                            backgroundColor: [
+                                '#667eea',
+                                '#48bb78',
+                                '#fbbf24',
+                                '#f56565',
+                                '#9f7aea'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Load all predictions from all users
+        async function loadAllPredictions() {
+            try {
+                showLoading();
+                console.log("Loading all predictions...");
+                const response = await fetch('/api/admin/all-predictions');
+                const data = await response.json();
+
+                console.log("Predictions response:", data);
+
+                if (data.success) {
+                    allPredictions = data.predictions || [];
+                    console.log(`Loaded ${allPredictions.length} predictions`);
+                    displayAllPredictions(allPredictions);
+                    updatePredictionStats(allPredictions);
+                } else {
+                    showAlert(data.message || 'Failed to load predictions', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading predictions:', error);
+                showAlert('Error loading predictions: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function updatePredictionStats(predictions) {
+            const quickCount = predictions.filter(p => p.prediction_type === 'quick').length;
+            const standardCount = predictions.filter(p => p.prediction_type === 'standard').length;
+            const uniqueUsers = new Set(predictions.map(p => p.user_id)).size;
+
+            const statsContainer = document.getElementById('predictionStats');
+            if (!statsContainer) return;
+
+            statsContainer.innerHTML = `
+                <div class="summary-card">
+                    <div class="summary-value">${predictions.length}</div>
+                    <div class="summary-label">Total Predictions</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${quickCount}</div>
+                    <div class="summary-label">Quick Predictions</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${standardCount}</div>
+                    <div class="summary-label">Standard Predictions</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-value">${uniqueUsers}</div>
+                    <div class="summary-label">Unique Users</div>
+                </div>
+            `;
+        }
+
+        function displayAllPredictions(predictions) {
+            const tableContainer = document.getElementById('allPredictionsTable');
+            if (!tableContainer) return;
+
+            if (!predictions || predictions.length === 0) {
+                tableContainer.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #718096;">
+                        <i class="fas fa-chart-line" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>No Predictions Found</h3>
+                        <p>No predictions have been made by any users yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Info</th>
+                            <th>ID</th>
+                            <th>Dataset</th>
+                            <th>Metric</th>
+                            <th>Year</th>
+                            <th>Predicted Value</th>
+                            <th>Accuracy</th>
+                            <th>Type</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            predictions.forEach(pred => {
+                const date = pred.prediction_date ? new Date(pred.prediction_date) : new Date();
+                const accuracyPercent = pred.accuracy ? (pred.accuracy * 100).toFixed(2) : 'N/A';
+                const accuracyColor = pred.accuracy > 0.7 ? '#48bb78' : (pred.accuracy > 0.5 ? '#fbbf24' : '#f56565');
+                const userName = pred.user_name || 'Unknown User';
+                const userEmail = pred.user_email || 'No email';
+                const userInitial = userName.charAt(0).toUpperCase();
+
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div class="user-details">
+                                    <span class="user-name">${userName}</span>
+                                    <span class="user-email">${userEmail}</span>
+                                    <small style="color: #718096;">ID: ${pred.user_id || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>#${pred.id || 'N/A'}</td>
+                        <td>${pred.dataset_name || 'N/A'}</td>
+                        <td>${pred.predicted_metric || 'N/A'}</td>
+                        <td>${pred.year || 'N/A'}</td>
+                        <td><strong>${typeof pred.predicted_value === 'number' ? pred.predicted_value.toFixed(4) : pred.predicted_value}</strong></td>
+                        <td>
+                            <span class="badge" style="background: ${accuracyColor}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${accuracyPercent}%
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: ${pred.prediction_type === 'quick' ? '#fbbf24' : '#48bb78'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${pred.prediction_type || 'standard'}
+                            </span>
+                        </td>
+                        <td>${date.toLocaleString()}</td>
+                        <td>
+                            <button class="action-btn view" onclick="viewUserDetails(${pred.user_id})" title="View User">
+                                <i class="fas fa-user"></i>
+                            </button>
+                            <button class="action-btn delete" onclick="deleteAdminPrediction(${pred.id})" title="Delete Prediction">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // Load all datasets from all users
+        async function loadAllDatasets() {
+            try {
+                showLoading();
+                console.log("Loading all datasets...");
+                const response = await fetch('/api/admin/all-datasets');
+                const data = await response.json();
+
+                console.log("Datasets response:", data);
+
+                if (data.success) {
+                    allDatasets = data.datasets || [];
+                    console.log(`Loaded ${allDatasets.length} datasets`);
+                    displayAllDatasets(allDatasets);
+                } else {
+                    showAlert(data.message || 'Failed to load datasets', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading datasets:', error);
+                showAlert('Error loading datasets: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayAllDatasets(datasets) {
+            const tableContainer = document.getElementById('allDatasetsTable');
+            if (!tableContainer) return;
+
+            if (!datasets || datasets.length === 0) {
+                tableContainer.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #718096;">
+                        <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>No Datasets Found</h3>
+                        <p>No datasets have been uploaded by any users yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User Info</th>
+                            <th>Dataset Name</th>
+                            <th>Rows</th>
+                            <th>Columns</th>
+                            <th>Type</th>
+                            <th>Primary</th>
+                            <th>Uploaded</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            datasets.forEach(ds => {
+                const date = ds.uploaded_date ? new Date(ds.uploaded_date) : new Date();
+                const userName = ds.user_name || 'Unknown User';
+                const userEmail = ds.user_email || 'No email';
+                const userInitial = userName.charAt(0).toUpperCase();
+
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div class="user-details">
+                                    <span class="user-name">${userName}</span>
+                                    <span class="user-email">${userEmail}</span>
+                                    <small style="color: #718096;">ID: ${ds.user_id || 'N/A'}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><strong>${ds.name || 'N/A'}</strong></td>
+                        <td>${ds.row_count || 0}</td>
+                        <td>${ds.actual_columns || ds.column_count || 0}</td>
+                        <td>
+                            <span class="badge" style="background: ${ds.is_default ? '#4299e1' : '#48bb78'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${ds.is_default ? 'Default' : 'Custom'}
+                            </span>
+                        </td>
+                        <td>${ds.is_primary ? '✅' : '❌'}</td>
+                        <td>${date.toLocaleDateString()}</td>
+                        <td>${ds.description || 'N/A'}</td>
+                        <td>
+                            <button class="action-btn view" onclick="viewDataset('${ds.name}', ${ds.user_id})" title="View Dataset">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="action-btn view" onclick="viewUserDetails(${ds.user_id})" title="View User">
+                                <i class="fas fa-user"></i> User
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // View dataset details
+        async function viewDataset(datasetName, userId) {
+            try {
+                showLoading();
+                console.log(`Viewing dataset: ${datasetName} for user: ${userId}`);
+
+                // Fetch dataset data with user_id parameter for admin
+                const response = await fetch(`/api/dataset/${encodeURIComponent(datasetName)}?user_id=${userId}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayDatasetModal(datasetName, result.data, userId);
+                } else {
+                    showAlert(result.message || 'Failed to load dataset', 'error');
+                }
+            } catch (error) {
+                console.error('Error viewing dataset:', error);
+                showAlert('Error loading dataset: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Display dataset in modal
+        function displayDatasetModal(datasetName, data, userId) {
+            // Get modal element
+            let modal = document.getElementById('datasetViewModal');
+
+            // Get column headers
+            const headers = data.length > 0 ? Object.keys(data[0]) : [];
+
+            // Create modal content
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-database"></i> Dataset: ${datasetName}</h3>
+                        <button class="close-btn" onclick="closeDatasetModal()">&times;</button>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <span class="badge" style="background: #667eea; color: white; padding: 5px 10px; border-radius: 4px;">
+                                <i class="fas fa-table"></i> ${data.length} rows
+                            </span>
+                            <span class="badge" style="background: #48bb78; color: white; padding: 5px 10px; border-radius: 4px; margin-left: 10px;">
+                                <i class="fas fa-columns"></i> ${headers.length} columns
+                            </span>
+                            <span class="badge" style="background: #fbbf24; color: #1a202c; padding: 5px 10px; border-radius: 4px; margin-left: 10px;">
+                                <i class="fas fa-user"></i> User ID: ${userId}
+                            </span>
+                        </div>
+                        <button class="export-btn" onclick="exportDatasetData('${datasetName}')" style="background: #48bb78;">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                    
+                    <div style="max-height: 500px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: linear-gradient(135deg, #667eea, #764ba2); z-index: 10;">
+                                <tr>
+                                    ${headers.map(header => `
+                                        <th style="color: white; padding: 12px; text-align: left; font-size: 0.9rem;">
+                                            ${header}
+                                        </th>
+                                    `).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map((row, index) => `
+                                    <tr style="${index % 2 === 0 ? 'background: #f7fafc;' : 'background: white;'}">
+                                        ${headers.map(header => `
+                                            <td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #2d3748;">
+                                                ${row[header] !== null && row[header] !== undefined ?
+                    (typeof row[header] === 'number' ? row[header].toFixed(4) : row[header])
+                    : '<span style="color: #a0aec0;">null</span>'}
+                                            </td>
+                                        `).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="refresh-btn" onclick="closeDatasetModal()" style="background: #718096;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.style.display = 'flex';
+        }
+
+        // Close dataset modal
+        function closeDatasetModal() {
+            const modal = document.getElementById('datasetViewModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Export dataset data to CSV
+        function exportDatasetData(datasetName) {
+            const modal = document.getElementById('datasetViewModal');
+            const table = modal.querySelector('table');
+            if (!table) return;
+
+            const rows = [];
+            const headers = [];
+
+            // Get headers
+            table.querySelectorAll('thead th').forEach(th => {
+                headers.push(th.textContent);
+            });
+            rows.push(headers.join(','));
+
+            // Get data rows
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach(td => {
+                    let text = td.textContent.trim();
+                    if (text === 'null') text = '';
+                    if (text.includes(',')) text = `"${text}"`;
+                    row.push(text);
+                });
+                rows.push(row.join(','));
+            });
+
+            const csv = rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${datasetName}_data.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Filter predictions
+        function filterPredictions() {
+            const searchTerm = document.getElementById('predictionSearch')?.value.toLowerCase() || '';
+            const typeFilter = document.getElementById('predictionTypeFilter')?.value || '';
+
+            const filtered = allPredictions.filter(pred => {
+                const matchesSearch =
+                    (pred.user_name && pred.user_name.toLowerCase().includes(searchTerm)) ||
+                    (pred.user_email && pred.user_email.toLowerCase().includes(searchTerm)) ||
+                    (pred.dataset_name && pred.dataset_name.toLowerCase().includes(searchTerm)) ||
+                    (pred.predicted_metric && pred.predicted_metric.toLowerCase().includes(searchTerm)) ||
+                    (pred.id && pred.id.toString().includes(searchTerm));
+
+                const matchesType = !typeFilter || pred.prediction_type === typeFilter;
+
+                return matchesSearch && matchesType;
+            });
+
+            displayAllPredictions(filtered);
+            updatePredictionStats(filtered);
+        }
+
+        // Filter datasets
+        function filterDatasets() {
+            const searchTerm = document.getElementById('datasetSearch')?.value.toLowerCase() || '';
+
+            const filtered = allDatasets.filter(ds => {
+                return (ds.user_name && ds.user_name.toLowerCase().includes(searchTerm)) ||
+                    (ds.user_email && ds.user_email.toLowerCase().includes(searchTerm)) ||
+                    (ds.name && ds.name.toLowerCase().includes(searchTerm)) ||
+                    (ds.description && ds.description.toLowerCase().includes(searchTerm));
+            });
+
+            displayAllDatasets(filtered);
+        }
+
+        // Load recent users
+        async function loadRecentUsers() {
+            try {
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+
+                if (data.success) {
+                    const recentUsers = data.users.slice(0, 5);
+                    displayRecentUsers(recentUsers);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function displayRecentUsers(users) {
+            const tableContainer = document.getElementById('recentUsersTable');
+            if (!tableContainer) return;
+
+            if (!users || users.length === 0) {
+                tableContainer.innerHTML = '<p>No users found</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Provider</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                const userInitial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <span>${user.name || 'N/A'}</span>
+                            </div>
+                        </td>
+                        <td>${user.email}</td>
+                        <td>
+                            <span class="badge" style="background: ${user.role === 'admin' ? '#667eea' : '#48bb78'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${user.role}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: ${user.is_active ? '#48bb78' : '#fbbf24'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>${user.provider || 'local'}</td>
+                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                        <td>
+                            <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // Load all users
+        async function loadAllUsers() {
+            try {
+                showLoading();
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayAllUsers(data.users);
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showAlert('Error loading users', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayAllUsers(users) {
+            const tableContainer = document.getElementById('allUsersTable');
+            if (!tableContainer) return;
+
+            if (!users || users.length === 0) {
+                tableContainer.innerHTML = '<p>No users found</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Provider</th>
+                            <th>Last Login</th>
+                            <th>Created</th>
+                            <th>Activities</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            users.forEach(user => {
+                const userInitial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <span>${user.name || 'N/A'}</span>
+                            </div>
+                        </td>
+                        <td>${user.email}</td>
+                        <td>
+                            <span class="badge" style="background: ${user.role === 'admin' ? '#667eea' : '#48bb78'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${user.role}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: ${user.is_active ? '#48bb78' : '#fbbf24'}; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </td>
+                        <td>${user.provider || 'local'}</td>
+                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                        <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td>${user.activity_count || 0}</td>
+                        <td>
+                            <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="action-btn view" onclick="viewUserPredictions(${user.id})" title="View Predictions">
+                                <i class="fas fa-chart-line"></i>
+                            </button>
+                            <button class="action-btn ${user.is_active ? 'delete' : 'view'}" onclick="toggleUserStatus(${user.id})" title="Toggle Status">
+                                <i class="fas ${user.is_active ? 'fa-ban' : 'fa-check'}"></i>
+                            </button>
+                            ${user.role !== 'admin' ? `
+                                <button class="action-btn delete" onclick="deleteUser(${user.id})" title="Delete User">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // View user predictions
+        async function viewUserPredictions(userId) {
+            try {
+                showLoading();
+                const response = await fetch(`/api/admin/user-predictions/${userId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    allPredictions = data.predictions || [];
+                    // Switch to predictions tab
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        if (link.textContent.includes('All Predictions')) {
+                            link.click();
+                        }
+                    });
+                    displayAllPredictions(allPredictions);
+                    updatePredictionStats(allPredictions);
+                }
+            } catch (error) {
+                console.error('Error loading user predictions:', error);
+                showAlert('Error loading user predictions', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // View user activity
+        async function viewUserActivity(userId) {
+            try {
+                showLoading();
+                const response = await fetch(`/api/admin/user/${userId}/activity`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayUserActivity(data.activities);
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                showAlert('Error loading user activity', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayUserActivity(activities) {
+            const modalContent = document.getElementById('modalContent');
+            if (!modalContent) return;
+
+            if (!activities || activities.length === 0) {
+                modalContent.innerHTML = '<p style="text-align: center; padding: 20px;">No activities found</p>';
+            } else {
+                modalContent.innerHTML = activities.map(activity => `
+                    <div class="activity-item">
+                        <div class="activity-time">${new Date(activity.created_at).toLocaleString()}</div>
+                        <div class="activity-desc">
+                            <strong>${activity.activity_type}:</strong> ${activity.description}
+                        </div>
+                        <div class="activity-time">IP: ${activity.ip_address || 'N/A'}</div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('activityModal').classList.add('active');
+        }
+
+        // View user details
+        function viewUserDetails(userId) {
+            // Switch to users tab
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.textContent.includes('Users')) {
+                    link.click();
+                }
+            });
+        }
+
+        // Toggle user status
+        async function toggleUserStatus(userId) {
+            if (!confirm('Are you sure you want to toggle this user\'s status?')) return;
+
+            try {
+                showLoading();
+                const response = await fetch(`/api/admin/user/${userId}/toggle-status`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadAllUsers();
+                    loadRecentUsers();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling user status:', error);
+                showAlert('Error toggling user status', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Delete user
+        async function deleteUser(userId) {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+
+            try {
+                showLoading();
+                const response = await fetch(`/api/admin/user/${userId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    loadAllUsers();
+                    loadRecentUsers();
+                    loadAllPredictions();
+                    loadAllDatasets();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showAlert('Error deleting user', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Delete prediction from admin
+        async function deleteAdminPrediction(predictionId) {
+            if (!confirm('Are you sure you want to delete this prediction?')) return;
+
+            try {
+                showLoading();
+                const response = await fetch(`/api/prediction/${predictionId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('Prediction deleted successfully', 'success');
+                    loadAllPredictions();
+                    loadDashboardStats();
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting prediction:', error);
+                showAlert('Error deleting prediction', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Load all activity
+        async function loadAllActivity() {
+            try {
+                showLoading();
+                const response = await fetch('/api/admin/users');
+                const data = await response.json();
+
+                if (data.success) {
+                    const allActivities = [];
+                    for (const user of data.users.slice(0, 10)) {
+                        const activityResponse = await fetch(`/api/admin/user/${user.id}/activity`);
+                        const activityData = await activityResponse.json();
+                        if (activityData.success) {
+                            allActivities.push(...activityData.activities.map(a => ({ ...a, user_name: user.name, user_email: user.email })));
+                        }
+                    }
+
+                    allActivities.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    displayAllActivity(allActivities.slice(0, 100));
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                showAlert('Error loading activity', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayAllActivity(activities) {
+            const tableContainer = document.getElementById('activityTable');
+            if (!tableContainer) return;
+
+            if (!activities || activities.length === 0) {
+                tableContainer.innerHTML = `
+                    <div style="text-align: center; padding: 50px; color: #718096;">
+                        <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h3>No Activity Found</h3>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHtml = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Activity Type</th>
+                            <th>Description</th>
+                            <th>Time</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            activities.forEach(activity => {
+                const userInitial = activity.user_name ? activity.user_name.charAt(0).toUpperCase() : 'U';
+                tableHtml += `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${userInitial}</div>
+                                <div class="user-details">
+                                    <span class="user-name">${activity.user_name || 'Unknown'}</span>
+                                    <span class="user-email">${activity.user_email || ''}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: #4299e1; color: white; padding: 4px 8px; border-radius: 4px;">
+                                ${activity.activity_type}
+                            </span>
+                        </td>
+                        <td>${activity.description}</td>
+                        <td>${new Date(activity.created_at).toLocaleString()}</td>
+                        <td>${activity.ip_address || 'N/A'}</td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += '</tbody></table>';
+            tableContainer.innerHTML = tableHtml;
+        }
+
+        // Load system stats
+        async function loadSystemStats() {
+            try {
+                const response = await fetch('/api/admin/dashboard-stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    const container = document.getElementById('systemStatsContainer');
+                    if (!container) return;
+
+                    container.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h3>Total Users</h3>
+                                <div class="stat-number">${data.stats.users.total}</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h3>Active Users</h3>
+                                <div class="stat-number">${data.stats.users.active}</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h3>Admins</h3>
+                                <div class="stat-number">${data.stats.users.admins}</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h3>Total Predictions</h3>
+                                <div class="stat-number">${data.stats.system.total_predictions}</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-info">
+                                <h3>Total Datasets</h3>
+                                <div class="stat-number">${data.stats.system.total_datasets}</div>
+                            </div>
+                            <div class="stat-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading system stats:', error);
+            }
+        }
+
+        // Export functions
+        function exportPredictions() {
+            if (!allPredictions || allPredictions.length === 0) {
+                showAlert('No predictions to export', 'warning');
+                return;
+            }
+
+            const csv = [
+                ['User ID', 'User Name', 'User Email', 'Prediction ID', 'Dataset', 'Metric', 'Year', 'Predicted Value', 'Accuracy', 'Type', 'Date'],
+                ...allPredictions.map(p => [
+                    p.user_id || '',
+                    p.user_name || 'Unknown',
+                    p.user_email || 'No email',
+                    p.id || '',
+                    p.dataset_name || 'N/A',
+                    p.predicted_metric || 'N/A',
+                    p.year || 'N/A',
+                    p.predicted_value || 'N/A',
+                    p.accuracy ? (p.accuracy * 100).toFixed(2) + '%' : 'N/A',
+                    p.prediction_type || 'standard',
+                    p.prediction_date ? new Date(p.prediction_date).toLocaleString() : 'N/A'
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            downloadCSV(csv, 'all_predictions.csv');
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function closeModal() {
+            document.getElementById('activityModal').classList.remove('active');
+        }
+
+        async function logout() {
+            try {
+                showLoading();
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Admin dashboard loaded");
+            loadDashboardStats();
+            loadRecentUsers();
+        });
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('activityModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+            const datasetModal = document.getElementById('datasetViewModal');
+            if (event.target === datasetModal) {
+                closeDatasetModal();
+            }
+        }
+    </script>
+</body>
+
+</html>
