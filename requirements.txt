@@ -4,4 +4,3 @@ pandas==2.2.2
 setuptools
 wheel
 gunicorn
-python-3.11.9
