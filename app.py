@@ -16,96 +16,18 @@ import io
 import re
 import secrets
 from functools import wraps
-from dotenv import load_dotenv
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # For session management
 CORS(app)
 
-# Load .env file if it exists (local development)
-if os.path.exists('.env'):
-    load_dotenv()
-
-# Database configuration - PRODUCTION READY
-DB_CONFIG = {}
-
-# Method 1: DATABASE_URL se (Railway/Heroku/AWS/etc.)
-if os.environ.get('DATABASE_URL'):
-    db_url = os.environ.get('DATABASE_URL')
-    print(f"📦 Using DATABASE_URL")
-    
-    # Parse MySQL URL - different formats handle karo
-    # Format: mysql://username:password@host:port/database
-    match = re.match(r'mysql://([^:]+):([^@]+)@([^:/]+):?(\d*)/([^?]+)', db_url)
-    if match:
-        DB_CONFIG = {
-            'host': match.group(3),
-            'user': match.group(1),
-            'password': match.group(2),
-            'database': match.group(5)
-        }
-        if match.group(4):
-            DB_CONFIG['port'] = match.group(4)
-        print(f"✅ DATABASE_URL parsed: {DB_CONFIG['host']}/{DB_CONFIG['database']}")
-
-# Method 2: CLEARDB_DATABASE_URL se (Heroku ClearDB)
-elif os.environ.get('CLEARDB_DATABASE_URL'):
-    db_url = os.environ.get('CLEARDB_DATABASE_URL')
-    match = re.match(r'mysql://([^:]+):([^@]+)@([^:/]+):?(\d*)/([^?]+)', db_url)
-    if match:
-        DB_CONFIG = {
-            'host': match.group(3),
-            'user': match.group(1),
-            'password': match.group(2),
-            'database': match.group(5)
-        }
-        if match.group(4):
-            DB_CONFIG['port'] = match.group(4)
-        print(f"✅ CLEARDB_DATABASE_URL parsed")
-
-# Method 3: JAWSDB_URL se (Heroku JawsDB)
-elif os.environ.get('JAWSDB_URL'):
-    db_url = os.environ.get('JAWSDB_URL')
-    match = re.match(r'mysql://([^:]+):([^@]+)@([^:/]+):?(\d*)/([^?]+)', db_url)
-    if match:
-        DB_CONFIG = {
-            'host': match.group(3),
-            'user': match.group(1),
-            'password': match.group(2),
-            'database': match.group(5)
-        }
-        if match.group(4):
-            DB_CONFIG['port'] = match.group(4)
-        print(f"✅ JAWSDB_URL parsed")
-
-# Method 4: Individual environment variables se
-elif os.environ.get('DB_HOST'):
-    DB_CONFIG = {
-        'host': os.environ.get('DB_HOST'),
-        'user': os.environ.get('DB_USER', 'root'),
-        'password': os.environ.get('DB_PASSWORD', ''),
-        'database': os.environ.get('DB_NAME', 'forest_prediction_db')
-    }
-    if os.environ.get('DB_PORT'):
-        DB_CONFIG['port'] = os.environ.get('DB_PORT')
-    print(f"✅ Using individual DB environment variables")
-
-# Method 5: Local development fallback
-else:
-    DB_CONFIG = {
-        'host': 'localhost',
-        'user': 'root',
-        'password': 'Harshdeep*123',
-        'database': 'forest_prediction_db'
-    }
-    print("⚠️ Using local database configuration (localhost)")
-
-# Add connection timeout and other optimizations for production
-DB_CONFIG['connection_timeout'] = 30
-DB_CONFIG['pool_size'] = 5
-DB_CONFIG['pool_name'] = 'mypool'
-
-print(f"📊 Database target: {DB_CONFIG['host']}:{DB_CONFIG.get('port', '3306')}/{DB_CONFIG['database']}")
+# Database configuration
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'Harshdeep*123',
+    'database': 'forest_prediction_db'
+}
 
 # Initialize database with proper error handling
 def init_database():
@@ -114,8 +36,7 @@ def init_database():
         connection = mysql.connector.connect(
             host=DB_CONFIG['host'],
             user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            port=DB_CONFIG.get('port', 3306)
+            password=DB_CONFIG['password']
         )
         
         cursor = connection.cursor()
@@ -275,50 +196,22 @@ def load_forest_data_for_admin(cursor, connection, admin_id):
         print(f"❌ Error loading forest_data.csv: {e}")
         traceback.print_exc()
 
-# Production mein database initialization ko handle karo
-IS_PRODUCTION = os.environ.get('ENV') == 'production' or os.environ.get('DATABASE_URL') is not None
-
-if IS_PRODUCTION:
-    print("🏭 Running in production mode")
-    # Production mein database already exist karna chahiye
-    # Agar database nahi hai to manually create karo
-    print("📌 Make sure database is created manually or via migrations")
-    
-    # Check database connection
-    try:
-        test_conn = mysql.connector.connect(**DB_CONFIG)
-        test_conn.close()
-        print("✅ Database connection test successful")
-    except Exception as e:
-        print(f"⚠️ Database connection test failed: {e}")
-        print("⚠️ You may need to create the database manually")
-else:
-    # Local development mein initialize karo
-    print("💻 Running in development mode")
-    init_database()
+# Initialize database
+init_database()
 
 def get_db_connection():
     """Create database connection with retry logic"""
-    max_retries = 3
-    retry_count = 0
-    
-    while retry_count < max_retries:
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        return connection
+    except Error as e:
+        print(f"❌ Database connection error: {e}")
         try:
+            init_database()
             connection = mysql.connector.connect(**DB_CONFIG)
             return connection
-        except Error as e:
-            retry_count += 1
-            print(f"❌ Database connection error (attempt {retry_count}/{max_retries}): {e}")
-            
-            if retry_count == max_retries:
-                print("⚠️ All connection attempts failed. Check your database configuration.")
-                return None
-            
-            # Wait before retry
-            import time
-            time.sleep(2)
-    
-    return None
+        except:
+            return None
 
 def sanitize_filename(filename):
     """Remove invalid characters from filename"""
@@ -1922,10 +1815,5 @@ if __name__ == '__main__':
     
     print("🚀 Starting Forest Data Analysis & Prediction System...")
     print(f"📁 Forest data file: {'✅ Found' if os.path.exists('forest_data.csv') else '❌ Not found'}")
-    
-    # Get port from environment variable for production
-    port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('ENV') != 'production'
-    
-    print(f"🌐 Server running at: http://localhost:{port}")
-    app.run(debug=debug_mode, host='0.0.0.0', port=port)
+    print("🌐 Server running at: http://localhost:5000")
+    app.run(debug=True, port=5000)
