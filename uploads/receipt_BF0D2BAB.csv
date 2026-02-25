@@ -1,0 +1,21 @@
+HEALTHCARE SUPPORT SYSTEM - PATIENT RECEIPT
+
+Patient ID:,BF0D2BAB
+Name:,Harshdeep Kumar
+Age:,20
+Gender:,Male
+Contact:,09835922039
+Date:,2025-10-23T14:37:43.899189
+
+SYMPTOMS:
+ abdominal_pain
+
+DIAGNOSIS:
+Predicted Disease:,Peptic ulcer diseae
+Confidence:,22.0%
+
+TREATMENT:
+Status:,Pending
+
+Doctor/Admin Signature: ________________
+Date: ________________
