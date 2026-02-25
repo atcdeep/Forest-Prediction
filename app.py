@@ -83,7 +83,7 @@ elif os.environ.get('DB_HOST'):
     DB_CONFIG = {
         'host': os.environ.get('DB_HOST'),
         'user': os.environ.get('DB_USER', 'root'),
-        'password': os.environ.get('DB_PASSWORD', 'Harshdeep*123'),
+        'password': os.environ.get('DB_PASSWORD', ''),
         'database': os.environ.get('DB_NAME', 'forest_prediction_db')
     }
     if os.environ.get('DB_PORT'):
