@@ -5,4 +5,5 @@ numpy
 scikit-learn
 mysql-connector-python
 openpyxl
+python-dotenv>=1.0.0
 gunicorn
