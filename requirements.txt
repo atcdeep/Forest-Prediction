@@ -1,9 +1,9 @@
-flask
+Flask
 flask-cors
+gunicorn
+mysql-connector-python
 pandas
 numpy
 scikit-learn
-mysql-connector-python
 openpyxl
-python-dotenv>=1.0.0
-gunicorn
+python-dotenv
