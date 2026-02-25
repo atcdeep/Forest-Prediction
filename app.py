@@ -27,7 +27,7 @@ DB_CONFIG = {
     'user': 'root',
     'password': 'Harshdeep*123',
     'database': 'forest_prediction_db',
-    'port': 3306
+    'port': 5000
 }
 
 # Initialize database with proper error handling
