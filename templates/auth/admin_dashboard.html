@@ -1398,6 +1398,30 @@
         let allPredictions = [];
         let allDatasets = [];
 
+        // Helper function to format date only (no time)
+        function formatDateOnly(dateString) {
+            if (!dateString) return 'N/A';
+
+            try {
+                const date = new Date(dateString);
+
+                // Check if date is valid
+                if (isNaN(date.getTime())) {
+                    return 'Invalid Date';
+                }
+
+                // Format: YYYY-MM-DD only (no time)
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
+            } catch (e) {
+                console.error('Date formatting error:', e);
+                return 'Invalid Date';
+            }
+        }
+
         // Check admin session
         async function checkAdminSession() {
             try {
@@ -1672,7 +1696,6 @@
             `;
 
             predictions.forEach(pred => {
-                const date = pred.prediction_date ? new Date(pred.prediction_date) : new Date();
                 const accuracyPercent = pred.accuracy ? (pred.accuracy * 100).toFixed(2) : 'N/A';
                 const accuracyColor = pred.accuracy > 0.7 ? '#48bb78' : (pred.accuracy > 0.5 ? '#fbbf24' : '#f56565');
                 const userName = pred.user_name || 'Unknown User';
@@ -1706,7 +1729,7 @@
                                 ${pred.prediction_type || 'standard'}
                             </span>
                         </td>
-                        <td>${date.toLocaleString()}</td>
+                        <td>${formatDateOnly(pred.prediction_date)}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserDetails(${pred.user_id})" title="View User">
                                 <i class="fas fa-user"></i>
@@ -1773,7 +1796,7 @@
                             <th>Columns</th>
                             <th>Type</th>
                             <th>Primary</th>
-                            <th>Uploaded</th>
+                            <th>Uploaded Date</th>
                             <th>Description</th>
                             <th>Actions</th>
                         </tr>
@@ -1782,7 +1805,6 @@
             `;
 
             datasets.forEach(ds => {
-                const date = ds.uploaded_date ? new Date(ds.uploaded_date) : new Date();
                 const userName = ds.user_name || 'Unknown User';
                 const userEmail = ds.user_email || 'No email';
                 const userInitial = userName.charAt(0).toUpperCase();
@@ -1808,7 +1830,7 @@
                             </span>
                         </td>
                         <td>${ds.is_primary ? '✅' : '❌'}</td>
-                        <td>${date.toLocaleDateString()}</td>
+                        <td>${formatDateOnly(ds.uploaded_date)}</td>
                         <td>${ds.description || 'N/A'}</td>
                         <td>
                             <button class="action-btn view" onclick="viewDataset('${ds.name}', ${ds.user_id})" title="View Dataset">
@@ -2039,7 +2061,7 @@
                             <th>Role</th>
                             <th>Status</th>
                             <th>Provider</th>
-                            <th>Last Login</th>
+                            <th>Last Login Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2068,7 +2090,7 @@
                             </span>
                         </td>
                         <td>${user.provider || 'local'}</td>
-                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                        <td>${formatDateOnly(user.last_login)}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
                                 <i class="fas fa-eye"></i>
@@ -2118,8 +2140,8 @@
                             <th>Role</th>
                             <th>Status</th>
                             <th>Provider</th>
-                            <th>Last Login</th>
-                            <th>Created</th>
+                            <th>Last Login Date</th>
+                            <th>Created Date</th>
                             <th>Activities</th>
                             <th>Actions</th>
                         </tr>
@@ -2149,8 +2171,8 @@
                             </span>
                         </td>
                         <td>${user.provider || 'local'}</td>
-                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
-                        <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
+                        <td>${formatDateOnly(user.last_login)}</td>
+                        <td>${formatDateOnly(user.created_at)}</td>
                         <td>${user.activity_count || 0}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
@@ -2229,11 +2251,10 @@
             } else {
                 modalContent.innerHTML = activities.map(activity => `
                     <div class="activity-item">
-                        <div class="activity-time">${new Date(activity.created_at).toLocaleString()}</div>
+                        <div class="activity-time">${formatDateOnly(activity.created_at)}</div>
                         <div class="activity-desc">
                             <strong>${activity.activity_type}:</strong> ${activity.description}
                         </div>
-                        <div class="activity-time">IP: ${activity.ip_address || 'N/A'}</div>
                     </div>
                 `).join('');
             }
@@ -2380,8 +2401,7 @@
                             <th>User</th>
                             <th>Activity Type</th>
                             <th>Description</th>
-                            <th>Time</th>
-                            <th>IP Address</th>
+                            <th>Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2406,8 +2426,7 @@
                             </span>
                         </td>
                         <td>${activity.description}</td>
-                        <td>${new Date(activity.created_at).toLocaleString()}</td>
-                        <td>${activity.ip_address || 'N/A'}</td>
+                        <td>${formatDateOnly(activity.created_at)}</td>
                     </tr>
                 `;
             });
@@ -2499,7 +2518,7 @@
                     p.predicted_value || 'N/A',
                     p.accuracy ? (p.accuracy * 100).toFixed(2) + '%' : 'N/A',
                     p.prediction_type || 'standard',
-                    p.prediction_date ? new Date(p.prediction_date).toLocaleString() : 'N/A'
+                    formatDateOnly(p.prediction_date)
                 ])
             ].map(row => row.join(',')).join('\n');
 
