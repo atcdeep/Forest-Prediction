@@ -4,24 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forest Prediction System - Home</title>
+    <title>ForestPredict · main dashboard</title>
+    <!-- Font Awesome 6 (free) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* ===== GLOBAL STYLES ===== */
-        :root {
-            --primary: #4361ee;
-            --secondary: #7209b7;
-            --success: #06d6a0;
-            --warning: #ff9e00;
-            --danger: #ef476f;
-            --info: #118ab2;
-            --purple: #9d4edd;
-            --orange: #ff7b00;
-            --dark: #212529;
-            --light: #f8f9fa;
-            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -29,1045 +15,962 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(145deg, #0b1f2e 0%, #1a3b4f 40%, #0f2c3d 100%);
+            color: #f0f6fc;
             min-height: 100vh;
-            color: var(--dark);
-            line-height: 1.6;
-            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
             overflow-x: hidden;
+            position: relative;
         }
 
-        /* ===== ANIMATED BACKGROUND ===== */
+        /* animated organic particles */
         body::before {
             content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(46, 204, 113, 0.12) 0%, transparent 25%),
+                radial-gradient(circle at 85% 70%, rgba(52, 152, 219, 0.12) 0%, transparent 28%),
+                radial-gradient(circle at 40% 80%, rgba(241, 196, 15, 0.08) 0%, transparent 30%),
+                repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.01) 0px, rgba(255, 255, 255, 0.01) 1px, transparent 1px, transparent 10px);
+            z-index: -1;
+            animation: slowDrift 32s infinite alternate ease-in-out;
+        }
+
+        @keyframes slowDrift {
+            0% {
+                transform: scale(1) rotate(0deg);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1.1) rotate(1deg);
+                opacity: 1;
+            }
+        }
+
+        /* floating leaves / particles */
+        .nature-particle {
+            position: fixed;
+            color: rgba(70, 130, 90, 0.2);
+            font-size: 2.5rem;
+            user-select: none;
+            pointer-events: none;
+            z-index: -1;
+            animation: levitate 24s infinite linear;
+        }
+
+        .nature-particle:nth-child(odd) {
+            color: rgba(240, 200, 120, 0.15);
+        }
+
+        @keyframes levitate {
+            0% {
+                transform: translateY(110vh) rotate(0deg) scale(0.8);
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 0.4;
+            }
+
+            80% {
+                opacity: 0.3;
+            }
+
+            100% {
+                transform: translateY(-20vh) rotate(240deg) scale(1.4);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            max-width: 1300px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+        }
+
+        /* ----- HEADER (forest emblem) ----- */
+        .header {
+            margin-bottom: 70px;
+            animation: emergeDown 1s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .forest-emblem {
+            font-size: 110px;
+            line-height: 1;
+            margin-bottom: 15px;
+            display: inline-block;
+            filter: drop-shadow(0 10px 20px rgba(46, 204, 113, 0.4));
+            animation: sway 4s infinite alternate ease-in-out;
+        }
+
+        .forest-emblem i {
+            background: linear-gradient(145deg, #2ecc71, #27ae60, #f1c40f);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin: 0 -8px;
+        }
+
+        @keyframes sway {
+            0% {
+                transform: rotate(-2deg) scale(1);
+            }
+
+            100% {
+                transform: rotate(2deg) scale(1.02);
+            }
+        }
+
+        .header h1 {
+            font-size: 58px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #d0f0d0, #a0d6b0, #7bc5a5);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 10px 30px rgba(30, 80, 60, 0.6);
+            margin-bottom: 25px;
+        }
+
+        .header-tagline {
+            font-size: 22px;
+            max-width: 950px;
+            margin: 0 auto;
+            background: rgba(10, 35, 30, 0.5);
+            backdrop-filter: blur(8px);
+            padding: 20px 35px;
+            border-radius: 70px;
+            border: 1px solid rgba(120, 200, 150, 0.25);
+            box-shadow: 0 20px 35px -8px rgba(0, 30, 10, 0.5);
+            color: #e2f0e7;
+            line-height: 1.7;
+        }
+
+        /* ----- STATS (forest metrics) ----- */
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 70px 0 60px;
+            perspective: 1200px;
+        }
+
+        .stat-moss {
+            background: linear-gradient(145deg, rgba(30, 65, 50, 0.5), rgba(10, 35, 25, 0.7));
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(70, 140, 100, 0.3);
+            border-radius: 30px;
+            padding: 30px 20px;
+            transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.6);
+            animation: glideUp 0.8s both;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-moss::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 40%, rgba(90, 200, 130, 0.2), transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .stat-moss:hover::after {
+            opacity: 1;
+        }
+
+        .stat-moss:hover {
+            transform: translateY(-12px) rotateX(2deg);
+            border-color: rgba(120, 220, 150, 0.6);
+            box-shadow: 0 28px 40px -8px #2ecc7130;
+        }
+
+        .stat-moss:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .stat-moss:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .stat-moss:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .stat-moss:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .stat-icon {
+            font-size: 48px;
+            background: linear-gradient(145deg, #2ecc71, #f39c12);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 4px 10px #1a4d2e);
+        }
+
+        .stat-moss h3 {
+            font-size: 44px;
+            font-weight: 700;
+            color: #f0ffe6;
+            text-shadow: 0 0 15px #6fe38f;
+            margin-bottom: 8px;
+        }
+
+        .stat-moss p {
+            color: #b8e0c5;
+            font-weight: 500;
+            font-size: 18px;
+            letter-spacing: 0.3px;
+        }
+
+        /* ----- LOGIN / ACCESS (forest & admin) ----- */
+        .access-section {
+            margin: 90px 0 70px;
+        }
+
+        .access-section h2 {
+            font-size: 42px;
+            margin-bottom: 60px;
+            display: inline-block;
+            padding-bottom: 18px;
+            border-bottom: 4px solid;
+            border-image: linear-gradient(90deg, #2ecc71, #f39c12, #1e8449) 1;
+            font-weight: 600;
+        }
+
+        .access-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 40px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .access-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(20, 50, 40, 0.45);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(100, 180, 140, 0.3);
+            border-radius: 40px;
+            padding: 55px 30px 50px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 40px -15px #00000080;
+        }
+
+        .access-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #2ecc71, #1abc9c, #f39c12, #2ecc71);
+            background-size: 300% 300%;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: -2;
+            border-radius: 42px;
+        }
+
+        .access-card:hover::before {
+            opacity: 0.35;
+        }
+
+        .access-card:hover {
+            transform: translateY(-14px) scale(1.02);
+            border-color: transparent;
+            box-shadow: 0 32px 55px -5px #7bef9b80;
+        }
+
+        .card-icon {
+            font-size: 90px;
+            margin-bottom: 25px;
+            transition: transform 0.25s;
+            filter: drop-shadow(0 8px 18px #00000050);
+        }
+
+        .access-card:hover .card-icon {
+            transform: scale(1.15) rotate(3deg);
+        }
+
+        .access-card.user .card-icon i {
+            color: #7befb2;
+            text-shadow: 0 0 25px #2ecc71;
+        }
+
+        .access-card.admin .card-icon i {
+            color: #f7c35c;
+            text-shadow: 0 0 25px #f39c12;
+        }
+
+        .access-card h3 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .access-card p {
+            color: #ceeedd;
+            font-size: 18px;
+            max-width: 270px;
+            line-height: 1.6;
+        }
+
+        /* ----- MAIN FEATURE BUTTONS (5 core actions) ----- */
+        .core-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 50px 0 30px;
+        }
+
+        .core-btn {
+            background: rgba(15, 60, 45, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1.5px solid rgba(120, 210, 150, 0.5);
+            color: #e4f5e9;
+            padding: 18px 34px;
+            border-radius: 60px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 10px 20px -8px #00000080;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        .core-btn i {
+            font-size: 1.8rem;
+            color: #b3ffc6;
+        }
+
+        .core-btn:hover {
+            background: #1e4f3a;
+            border-color: #7befb2;
+            transform: scale(1.05) translateY(-4px);
+            box-shadow: 0 18px 30px -5px #2ecc7180;
+        }
+
+        /* feature grid (six distinct forest features) */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 35px;
+            margin: 80px 0 50px;
+        }
+
+        .forest-feature {
+            background: linear-gradient(145deg, #153b30, #0d2f25);
+            border: 1px solid #2a6b4e40;
+            border-radius: 28px;
+            padding: 38px 25px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            transition: 0.3s ease;
+            box-shadow: 0 16px 32px -12px #0f2f1e;
+        }
+
+        .forest-feature:hover {
+            background: #1d4d3d;
+            border-color: #62b88b;
+            transform: translateY(-8px);
+            box-shadow: 0 25px 45px -10px #46b67e;
+        }
+
+        .feature-symbol {
+            font-size: 54px;
+            margin-bottom: 20px;
+        }
+
+        .feature-symbol i {
+            background: linear-gradient(145deg, #2ecc71, #e67e22);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .forest-feature h4 {
+            font-size: 26px;
+            margin-bottom: 15px;
+            color: #f0fdef;
+        }
+
+        .forest-feature p {
+            color: #b2dbc0;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        /* ----- MODAL (transparent overlay - full page style) ----- */
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
-                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
-                repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0px, rgba(255, 255, 255, 0.02) 2px, transparent 2px, transparent 8px);
+            background: rgba(10, 25, 18, 0.85);
+            backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
             pointer-events: none;
-            z-index: 0;
+            transition: opacity 0.3s ease;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: all;
         }
 
-        /* ===== NAVIGATION ===== */
-        .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2.5rem;
+        .modal-content {
+            background: rgba(20, 55, 40, 0.7);
+            backdrop-filter: blur(25px);
+            border: 3px solid rgba(120, 255, 160, 0.3);
             border-radius: 60px;
-            margin: 20px 0;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-            animation: slideDown 0.8s ease;
+            max-width: 900px;
+            width: 85%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 60px 50px;
+            box-shadow: 0 70px 120px #000000cc, 0 0 0 2px #2ecc7130 inset;
+            color: #f0fff0;
+            transform: scale(0.9);
+            transition: transform 0.25s ease;
+            scrollbar-width: thin;
+            scrollbar-color: #2ecc71 #1a3a2a;
         }
 
-        .navbar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success), var(--warning));
-            background-size: 300% 100%;
-            animation: gradientMove 3s infinite linear;
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
         }
 
-        @keyframes gradientMove {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            100% {
-                background-position: 300% 50%;
-            }
+        .modal-content::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--primary);
-            position: relative;
+        .modal-content::-webkit-scrollbar-track {
+            background: #1a3a2a;
+            border-radius: 8px;
         }
 
-        .logo i {
-            font-size: 2.2rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        .modal-content::-webkit-scrollbar-thumb {
+            background: #2ecc71;
+            border-radius: 8px;
+        }
+
+        .modal-content i.modal-icon {
+            font-size: 6rem;
+            background: linear-gradient(145deg, #c0ffd0, #a0e7b0);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            filter: drop-shadow(0 4px 8px rgba(67, 97, 238, 0.2));
+            margin-bottom: 20px;
         }
 
-        .logo span {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 15px;
-        }
-
-        .nav-btn {
-            padding: 12px 30px;
-            border-radius: 40px;
-            text-decoration: none;
+        .modal-content h2 {
+            font-size: 3.8rem;
+            margin-bottom: 30px;
+            border-bottom: 2px dashed #5faf7f;
+            padding-bottom: 20px;
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            border: none;
-            font-size: 1rem;
-            letter-spacing: 0.3px;
-            position: relative;
-            overflow: hidden;
         }
 
-        .nav-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .nav-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .login-btn {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.3);
-        }
-
-        .admin-btn {
-            background: transparent;
-            color: var(--primary);
-            border: 2px solid var(--primary);
-            box-shadow: 0 8px 20px rgba(67, 97, 238, 0.1);
-        }
-
-        .login-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.4);
-        }
-
-        .admin-btn:hover {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border-color: transparent;
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.3);
-        }
-
-        /* ===== HERO SECTION ===== */
-        .hero {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
+        .modal-description {
+            font-size: 1.4rem;
+            line-height: 1.8;
+            color: #daf5e0;
+            margin: 30px 0;
+            text-align: left;
+            background: rgba(0, 20, 10, 0.3);
+            padding: 30px;
             border-radius: 40px;
-            padding: 80px 60px;
-            margin: 40px 0;
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            position: relative;
-            overflow: hidden;
+            border-left: 8px solid #2ecc71;
         }
 
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(67, 97, 238, 0.03) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
+        .modal-description p {
+            margin-bottom: 20px;
         }
 
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -50%;
-            left: -50%;
-            width: 100%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(114, 9, 183, 0.03) 0%, transparent 70%);
-            animation: rotate 25s linear infinite reverse;
+        .modal-description ul {
+            margin-left: 25px;
+            list-style-type: '🌲 ';
+            font-size: 1.3rem;
         }
 
-        @keyframes rotate {
-            from {
-                transform: rotate(0deg);
-            }
-
-            to {
-                transform: rotate(360deg);
-            }
+        .modal-description li {
+            margin: 10px 0;
+            padding-left: 10px;
         }
 
-        .hero h1 {
-            font-size: 4rem;
-            color: var(--dark);
-            margin-bottom: 25px;
-            line-height: 1.2;
-            position: relative;
-            animation: fadeInUp 0.8s ease;
-        }
-
-        .hero h1 span {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            position: relative;
+        .close-modal {
+            background: #2ecc7130;
+            border: 2px solid #8aeab0;
+            color: white;
+            font-size: 1.9rem;
+            padding: 16px 55px;
+            border-radius: 70px;
+            cursor: pointer;
+            margin-top: 35px;
+            font-weight: 600;
+            transition: 0.2s;
             display: inline-block;
         }
 
-        .hero h1 span::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
+        .close-modal:hover {
+            background: #2ecc71b0;
+            border-color: white;
+            transform: scale(1.03);
+            box-shadow: 0 0 40px #7befb2;
+        }
+
+        /* footer */
+        .forest-footer {
+            margin-top: 100px;
+            padding: 45px 25px 30px;
+            border-top: 2px solid #2e6b4e40;
+            color: #aac7b5;
             width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border-radius: 4px;
-            transform: scaleX(0);
-            animation: expandLine 0.8s ease 0.5s forwards;
-        }
-
-        @keyframes expandLine {
-            to {
-                transform: scaleX(1);
-            }
-        }
-
-        .hero p {
-            font-size: 1.3rem;
-            color: #64748b;
-            max-width: 800px;
-            margin: 0 auto 35px;
-            line-height: 1.8;
-            position: relative;
-            animation: fadeInUp 0.8s ease 0.2s both;
-        }
-
-        /* ===== STATS CONTAINER ===== */
-        .stats-container {
-            display: flex;
-            justify-content: center;
-            gap: 60px;
-            margin: 50px 0;
-            animation: fadeInUp 0.8s ease 0.4s both;
-        }
-
-        .stat-item {
-            text-align: center;
-            position: relative;
-            padding: 20px 30px;
-            background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(114, 9, 183, 0.05));
-            border-radius: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .stat-item:hover {
-            transform: translateY(-5px);
-            background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(114, 9, 183, 0.1));
-        }
-
-        .stat-number {
-            font-size: 3.2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            color: #64748b;
-            font-size: 1.1rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* ===== FEATURES SECTION ===== */
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 30px;
-            margin: 60px 0;
-        }
-
-        .feature-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 40px 30px;
-            border-radius: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-            animation: fadeInUp 0.8s ease;
-            animation-fill-mode: both;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(67, 97, 238, 0.02), rgba(114, 9, 183, 0.02));
-            transform: translateY(100%);
-            transition: transform 0.4s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-15px) scale(1.02);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
-        }
-
-        .feature-card:hover::before {
-            transform: translateY(0);
-        }
-
-        .feature-icon {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 25px;
-            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.3);
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover .feature-icon {
-            transform: scale(1.1) rotate(5deg);
-        }
-
-        .feature-icon i {
-            font-size: 3rem;
-            color: white;
-            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-        }
-
-        .feature-card h3 {
-            font-size: 1.8rem;
-            color: var(--dark);
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-
-        .feature-card p {
-            color: #64748b;
-            line-height: 1.8;
-            font-size: 1.05rem;
-        }
-
-        /* ===== HOW IT WORKS ===== */
-        .how-it-works {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: 40px;
-            padding: 60px 50px;
-            margin: 60px 0;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 3rem;
-            color: var(--dark);
-            margin-bottom: 50px;
-            position: relative;
-            font-weight: 800;
-        }
-
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            border-radius: 4px;
-        }
-
-        .steps {
-            display: flex;
-            justify-content: space-between;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-
-        .step {
-            flex: 1;
-            min-width: 250px;
-            text-align: center;
-            position: relative;
-            padding: 30px 20px;
-            transition: all 0.3s ease;
-            animation: fadeInUp 0.8s ease;
-            animation-fill-mode: both;
-        }
-
-        .step:hover {
-            transform: translateY(-10px);
-        }
-
-        .step-number {
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border-radius: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            font-weight: bold;
-            margin: 0 auto 25px;
-            box-shadow: 0 15px 30px rgba(67, 97, 238, 0.3);
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .step:hover .step-number {
-            transform: scale(1.1) rotate(5deg);
-            border-radius: 30px;
-        }
-
-        .step h4 {
-            font-size: 1.5rem;
-            color: var(--dark);
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-
-        .step p {
-            color: #64748b;
-            line-height: 1.7;
-        }
-
-        /* ===== METRICS SHOWCASE ===== */
-        .metrics-showcase {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: 40px;
-            padding: 60px 50px;
-            margin: 60px 0;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-top: 40px;
-        }
-
-        .metric-item {
-            background: linear-gradient(135deg, #f8f9ff, #ffffff);
-            padding: 25px;
-            border-radius: 20px;
-            text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid transparent;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-            cursor: pointer;
-            animation: fadeInUp 0.8s ease;
-            animation-fill-mode: both;
-        }
-
-        .metric-item:hover {
-            border-color: var(--primary);
-            transform: scale(1.05) translateY(-5px);
-            box-shadow: 0 20px 30px rgba(67, 97, 238, 0.15);
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-        }
-
-        .metric-item:hover .metric-name,
-        .metric-item:hover .metric-value {
-            color: white;
-        }
-
-        .metric-name {
-            font-size: 1.2rem;
-            color: var(--dark);
-            margin-bottom: 10px;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .metric-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            transition: all 0.3s ease;
-        }
-
-        .metric-item:hover .metric-value {
-            background: white;
-            -webkit-background-clip: text;
-            background-clip: text;
-        }
-
-        /* ===== FOOTER ===== */
-        .footer {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border-radius: 40px;
-            padding: 40px;
-            margin-top: 60px;
-            text-align: center;
-            color: #64748b;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--success), var(--warning));
+            background: rgba(10, 30, 20, 0.5);
+            backdrop-filter: blur(12px);
+            border-radius: 60px 60px 0 0;
+            font-size: 16px;
         }
 
         .footer-links {
             display: flex;
             justify-content: center;
-            gap: 40px;
-            margin: 25px 0;
+            gap: 35px;
+            margin-bottom: 30px;
             flex-wrap: wrap;
         }
 
         .footer-links a {
-            color: var(--primary);
+            color: #a0e3b0;
             text-decoration: none;
-            transition: all 0.3s ease;
             font-weight: 500;
-            position: relative;
-            padding: 5px 0;
-        }
-
-        .footer-links a::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
+            padding: 8px 18px;
+            border-radius: 40px;
+            transition: all 0.2s;
+            background: rgba(60, 120, 80, 0.2);
+            border: 1px solid transparent;
         }
 
         .footer-links a:hover {
-            color: var(--secondary);
+            background: #1f6644;
+            color: white;
+            border-color: #8fddb0;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 22px #2ecc7140;
         }
 
-        .footer-links a:hover::after {
-            transform: scaleX(1);
+        .forest-footer p {
+            opacity: 0.8;
         }
 
-        /* ===== ANIMATIONS ===== */
-        @keyframes fadeInUp {
-            from {
+        /* animations */
+        @keyframes emergeDown {
+            0% {
                 opacity: 0;
-                transform: translateY(30px);
+                transform: translateY(-40px) scale(0.96);
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes pulse {
-
-            0%,
             100% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.05);
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
 
-        /* ===== RESPONSIVE DESIGN ===== */
-        @media (max-width: 1200px) {
-            .hero h1 {
-                font-size: 3.5rem;
+        @keyframes glideUp {
+            0% {
+                opacity: 0;
+                transform: translateY(35px) scale(0.95);
             }
 
-            .features {
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
 
-        @media (max-width: 992px) {
-            .hero {
-                padding: 60px 40px;
+        /* responsive */
+        @media (max-width: 1000px) {
+            .header h1 {
+                font-size: 48px;
             }
 
-            .hero h1 {
+            .header-tagline {
+                font-size: 20px;
+                padding: 18px 25px;
+            }
+
+            .modal-content {
+                padding: 40px 30px;
+            }
+
+            .modal-content h2 {
                 font-size: 3rem;
-            }
-
-            .section-title {
-                font-size: 2.5rem;
-            }
-
-            .stats-container {
-                gap: 30px;
             }
         }
 
         @media (max-width: 768px) {
-            .navbar {
-                flex-direction: column;
+            .header h1 {
+                font-size: 40px;
+            }
+
+            .forest-emblem {
+                font-size: 90px;
+            }
+
+            .stats-panel {
+                grid-template-columns: repeat(2, 1fr);
                 gap: 20px;
-                padding: 1.5rem;
             }
 
-            .nav-buttons {
-                width: 100%;
-                justify-content: center;
+            .access-grid {
+                gap: 25px;
             }
 
-            .hero {
+            .access-card {
                 padding: 40px 20px;
             }
 
-            .hero h1 {
-                font-size: 2.2rem;
+            .access-card h3 {
+                font-size: 30px;
             }
 
-            .hero p {
+            .core-btn {
+                padding: 14px 24px;
                 font-size: 1.1rem;
             }
 
-            .stats-container {
-                flex-direction: column;
-                gap: 20px;
-                align-items: center;
-            }
-
-            .stat-item {
-                width: 100%;
-                max-width: 300px;
-            }
-
-            .features {
-                grid-template-columns: 1fr;
-            }
-
-            .steps {
-                flex-direction: column;
-            }
-
-            .how-it-works,
-            .metrics-showcase {
-                padding: 40px 20px;
-            }
-
-            .section-title {
-                font-size: 2rem;
-            }
-
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .footer-links {
-                flex-direction: column;
-                gap: 15px;
+            .modal-description {
+                font-size: 1.2rem;
+                padding: 20px;
             }
         }
 
-        @media (max-width: 480px) {
-            .container {
-                padding: 15px;
+        @media (max-width: 560px) {
+            .stats-panel {
+                grid-template-columns: 1fr;
             }
 
-            .navbar {
-                border-radius: 30px;
-                padding: 1rem;
+            .header h1 {
+                font-size: 34px;
             }
 
-            .logo {
-                font-size: 1.3rem;
+            .card-icon {
+                font-size: 70px;
             }
 
-            .logo i {
-                font-size: 1.8rem;
-            }
-
-            .nav-btn {
-                padding: 10px 20px;
-                font-size: 0.9rem;
-            }
-
-            .hero {
-                border-radius: 30px;
-                padding: 30px 15px;
-            }
-
-            .hero h1 {
-                font-size: 1.8rem;
-            }
-
-            .hero p {
-                font-size: 1rem;
-            }
-
-            .feature-card {
-                padding: 30px 20px;
-            }
-
-            .feature-icon {
-                width: 80px;
-                height: 80px;
-            }
-
-            .feature-icon i {
+            .modal-content h2 {
                 font-size: 2.5rem;
             }
-
-            .feature-card h3 {
-                font-size: 1.5rem;
-            }
-
-            .step-number {
-                width: 60px;
-                height: 60px;
-                font-size: 1.5rem;
-            }
-
-            .step h4 {
-                font-size: 1.3rem;
-            }
-
-            .footer {
-                padding: 30px 20px;
-            }
         }
 
-        /* ===== UTILITY CLASSES ===== */
-        .text-gradient {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-
-        .bg-gradient {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-        }
-
-        .shadow-hover {
-            transition: box-shadow 0.3s ease;
-        }
-
-        .shadow-hover:hover {
-            box-shadow: 0 20px 40px rgba(67, 97, 238, 0.2);
-        }
-
-        /* ===== SCROLLBAR STYLES ===== */
+        /* scrollbar */
         ::-webkit-scrollbar {
-            width: 12px;
+            width: 10px;
         }
 
         ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            background: #16382b;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: linear-gradient(to bottom, var(--primary), var(--secondary));
-            border-radius: 10px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(to bottom, #3a56d4, #6300a8);
-        }
-
-        /* ===== LOADING ANIMATION ===== */
-        @keyframes shimmer {
-            0% {
-                background-position: -1000px 0;
-            }
-
-            100% {
-                background-position: 1000px 0;
-            }
-        }
-
-        .loading {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite;
+            background: linear-gradient(#2ecc71, #f1c40f);
+            border-radius: 8px;
         }
     </style>
 </head>
 
 <body>
+
+    <!-- floating forest particles -->
+    <div class="nature-particle" style="top: 5%; left: 2%;"><i class="fas fa-leaf"></i></div>
+    <div class="nature-particle" style="top: 15%; right: 1%; font-size: 3rem;"><i class="fas fa-tree"></i></div>
+    <div class="nature-particle" style="bottom: 10%; left: 8%;"><i class="fas fa-seedling"></i></div>
+    <div class="nature-particle" style="bottom: 25%; right: 6%;"><i class="fas fa-cloud-sun"></i></div>
+
+    <!-- MODAL overlay (full transparent page) -->
+    <div id="featureModal" class="modal-overlay">
+        <div class="modal-content" id="modalDynamicContent">
+            <i class="fas fa-tree modal-icon" id="modalIcon"></i>
+            <h2 id="modalTitle">Feature Name</h2>
+            <div class="modal-description" id="modalDesc">
+                <!-- detailed description will be injected -->
+                <p>Comprehensive details about the forest prediction capability.</p>
+            </div>
+            <div class="close-modal" id="closeModalBtn">✕ close</div>
+        </div>
+    </div>
+
     <div class="container">
-        <!-- Navigation -->
-        <nav class="navbar">
-            <div class="logo">
-                <i class="fas fa-tree"></i>
-                <span>ForestPredict</span>
+        <!-- header -->
+        <div class="header">
+            <div class="forest-emblem">
+                <i class="fas fa-tree"></i><i class="fas fa-mountain"></i><i class="fas fa-cloud"></i>
             </div>
-            <div class="nav-buttons">
-                <button class="nav-btn login-btn" onclick="location.href='/user-auth'">
-                    <i class="fas fa-user"></i> User Login
-                </button>
-                <button class="nav-btn admin-btn" onclick="location.href='/admin-auth'">
-                    <i class="fas fa-lock"></i> Admin Login
-                </button>
+            <h1>ForestPredict · main intelligence hub</h1>
+            <div class="header-tagline">
+                <i class="fas fa-chart-line" style="color:#7befb2; margin-right: 10px;"></i>
+                Predict forest health, carbon flux, biodiversity trends — with multi‑dataset machine learning.
             </div>
-        </nav>
+        </div>
 
-        <!-- Hero Section -->
-        <section class="hero fadeInUp">
-            <h1>Predict & Analyze <span>Forest Data</span></h1>
-            <p>Advanced machine learning platform for forest ecosystem prediction and environmental analysis. Make
-                data-driven decisions for a sustainable future.</p>
-
-
-            <button class="nav-btn login-btn" onclick="location.href='/user-auth'"
-                style="padding: 15px 40px; font-size: 1.2rem;">
-                <i class="fas fa-rocket"></i> Get Started
-            </button>
-        </section>
-
-        <!-- Features -->
-        <section class="features">
-            <div class="feature-card fadeInUp" style="animation-delay: 0.2s">
-                <div class="feature-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h3>Real-time Predictions</h3>
-                <p>Advanced ML algorithms for accurate forest metrics prediction including temperature, CO2 levels, and
-                    forest coverage.</p>
+        <!-- stats panel -->
+        <div class="stats-panel">
+            <div class="stat-moss">
+                <div class="stat-icon"><i class="fas fa-cloud-rain"></i></div>
+                <h3 id="precipitation-annual">1870</h3>
+                <p>annual rainfall (mm)</p>
             </div>
-
-            <div class="feature-card fadeInUp" style="animation-delay: 0.4s">
-                <div class="feature-icon">
-                    <i class="fas fa-database"></i>
-                </div>
-                <h3>Multi-Dataset Support</h3>
-                <p>Upload and analyze multiple datasets. Compare different environmental metrics across time periods.
-                </p>
+            <div class="stat-moss">
+                <div class="stat-icon"><i class="fas fa-temperature-high"></i></div>
+                <h3 id="temp-range">7.2°C · 34.1°C</h3>
+                <p>mean temperature range</p>
             </div>
-
-            <div class="feature-card fadeInUp" style="animation-delay: 0.6s">
-                <div class="feature-icon">
-                    <i class="fas fa-chart-pie"></i>
-                </div>
-                <h3>Interactive Visualizations</h3>
-                <p>Beautiful charts and graphs to visualize trends, correlations, and predictions in real-time.</p>
+            <div class="stat-moss">
+                <div class="stat-icon"><i class="fas fa-seedling"></i></div>
+                <h3 id="gpp">12.8 tC/ha/yr</h3>
+                <p>gross primary productivity</p>
             </div>
-
-            <div class="feature-card fadeInUp" style="animation-delay: 0.8s">
-                <div class="feature-icon">
-                    <i class="fas fa-cloud-sun"></i>
-                </div>
-                <h3>Climate Analysis</h3>
-                <p>Comprehensive climate metrics including temperature, rainfall, sea level rise, and extreme weather
-                    events.</p>
+            <div class="stat-moss">
+                <div class="stat-icon"><i class="fas fa-mountain"></i></div>
+                <h3 id="elevation">1420 m</h3>
+                <p>average elevation</p>
             </div>
+        </div>
 
-            <div class="feature-card fadeInUp" style="animation-delay: 1s">
-                <div class="feature-icon">
-                    <i class="fas fa-leaf"></i>
-                </div>
-                <h3>Forest Health</h3>
-                <p>Monitor forest area changes, renewable energy adoption, and carbon emission patterns.</p>
-            </div>
+        <!-- 5 main feature buttons (core actions) -->
+        <div class="core-buttons">
+            <button class="core-btn" data-feature="biome"><i class="fas fa-globe-asia"></i> biome ML</button>
+            <button class="core-btn" data-feature="satellite"><i class="fas fa-satellite"></i> fusion</button>
+            <button class="core-btn" data-feature="fire"><i class="fas fa-fire"></i> fire risk</button>
+            <button class="core-btn" data-feature="carbon"><i class="fas fa-leaf"></i> carbon flux</button>
+            <button class="core-btn" data-feature="biodiversity"><i class="fas fa-dove"></i> biodiversity</button>
+        </div>
 
-            <div class="feature-card fadeInUp" style="animation-delay: 1.2s">
-                <div class="feature-icon">
-                    <i class="fas fa-file-export"></i>
-                </div>
-                <h3>Export & Share</h3>
-                <p>Export predictions and visualizations. Share insights with stakeholders and researchers.</p>
+        <!-- feature cards -->
+        <div class="feature-grid">
+            <div class="forest-feature">
+                <div class="feature-symbol"><i class="fas fa-chart-pie"></i></div>
+                <h4>multi‑biome pred.</h4>
+                <p>taiga, tropical, temperate — specialized ML for each forest type.</p>
             </div>
-        </section>
+            <div class="forest-feature">
+                <div class="feature-symbol"><i class="fas fa-satellite-dish"></i></div>
+                <h4>satellite fusion</h4>
+                <p>integrate Landsat, Sentinel, and MODIS indices (NDVI, EVI, LAI).</p>
+            </div>
+            <div class="forest-feature">
+                <div class="feature-symbol"><i class="fas fa-fire"></i></div>
+                <h4>fire risk forecast</h4>
+                <p>dynamic fuel moisture & fire danger predictions up to 10 days.</p>
+            </div>
+            <div class="forest-feature">
+                <div class="feature-symbol"><i class="fas fa-globe-asia"></i></div>
+                <h4>carbon flux net</h4>
+                <p>NEE, GPP, Rh — full carbon balance with uncertainty.</p>
+            </div>
+        </div>
 
-        <!-- How It Works -->
-        <section class="how-it-works">
-            <h2 class="section-title">How It Works</h2>
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <h4>Upload Data</h4>
-                    <p>Upload your forest/environmental dataset or use our default dataset</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <h4>Select Metrics</h4>
-                    <p>Choose the environmental metrics you want to analyze and predict</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <h4>Generate Predictions</h4>
-                    <p>Our ML model generates accurate predictions based on historical data</p>
-                </div>
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <h4>Visualize Results</h4>
-                    <p>View interactive charts and download prediction reports</p>
-                </div>
+        <!-- login/access cards -->
+        <div class="access-section">
+            <h2>🔐 access forest intelligence</h2>
+            <div class="access-grid">
+                <a href="/user-auth" class="access-card user">
+                    <div class="card-icon"><i class="fas fa-user-astronaut"></i></div>
+                    <h3>Researcher</h3>
+                    <p>upload datasets, run predictions, visualize biomass & climate metrics</p>
+                </a>
+                <a href="/admin-auth" class="access-card admin">
+                    <div class="card-icon"><i class="fas fa-robot"></i></div>
+                    <h3>Eco admin</h3>
+                    <p>manage models, monitor data pipelines, configure alert thresholds</p>
+                </a>
             </div>
-        </section>
+        </div>
+
+        <!-- footer -->
+        <div class="forest-footer">
+            <p>© 2025 ForestPredict — open ecosystem analytics. real‑time since 2023.</p>
+            <p style="margin-top: 10px; font-size: 14px; opacity:0.6;">🌱 all predictions are probabilistic • version
+                2.4</p>
+        </div>
     </div>
 
     <script>
-        // Load dynamic data
-        async function loadStats() {
-            try {
-                const response = await fetch('/api/stats');
-                const data = await response.json();
+        (function () {
+            const modalOverlay = document.getElementById('featureModal');
+            const modalContentDiv = document.querySelector('.modal-content'); // the scrollable element
+            const modalIcon = document.getElementById('modalIcon');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalDesc = document.getElementById('modalDesc');
+            const closeBtn = document.getElementById('closeModalBtn');
 
-                document.getElementById('totalRecords').textContent = data.total_records?.toLocaleString() + '+' || '10K+';
-                document.getElementById('predictions').textContent = data.total_predictions?.toLocaleString() + '+' || '500+';
-                document.getElementById('accuracy').textContent = '95%';
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
-        }
+            // rich detailed content for each feature (1-2 paragraphs + bullet points)
+            const featureDetails = {
+                biome: {
+                    icon: 'fa-globe-asia',
+                    title: 'Multi‑biome machine learning',
+                    description: `
+                        <p><strong>Comprehensive biome-specific modeling:</strong> Our platform employs specialized deep learning architectures for boreal, temperate, and tropical forests. Each model is trained on thousands of in-situ and remote sensing measurements, capturing unique growth patterns, mortality drivers, and species interactions.</p>
+                        <p>Key capabilities include:</p>
+                        <ul>
+                            <li><strong>Domain adaptation</strong> — transfer learning between biomes improves predictions where data is sparse.</li>
+                            <li><strong>Ensemble uncertainty</strong> — Monte Carlo dropout provides confidence intervals for every output.</li>
+                            <li><strong>Phenology forecasting</strong> — start/end of growing season, peak greenness.</li>
+                        </ul>
+                        <p>Applicable for carbon accounting, conservation planning, and climate adaptation strategies.</p>
+                    `
+                },
+                satellite: {
+                    icon: 'fa-satellite',
+                    title: 'Satellite data fusion & vegetation indices',
+                    description: `
+                        <p><strong>Harmonized multi‑sensor analysis:</strong> We seamlessly integrate Landsat (30m, since 1984), Sentinel‑2 (10m, 5‑day revisit), and MODIS (daily, 250m) to create high‑frequency, high‑resolution vegetation metrics.</p>
+                        <p>Derived products include:</p>
+                        <ul>
+                            <li><strong>NDVI / EVI / LAI</strong> — smoothed, cloud‑masked, and gap‑filled time series.</li>
+                            <li><strong>Forest structure</strong> — canopy height, biomass proxies from SAR and optical synergy.</li>
+                            <li><strong>Disturbance detection</strong> — logging, fire scars, windthrow within days.</li>
+                        </ul>
+                        <p>All data is aligned to a common grid and made available for predictive modeling.</p>
+                    `
+                },
+                fire: {
+                    icon: 'fa-fire',
+                    title: 'Fire risk & behavior forecast',
+                    description: `
+                        <p><strong>Next‑generation fire danger system:</strong> Combines high‑resolution weather ensembles (HRES, ECMWF) with live fuel moisture from satellite and in‑situ sensors. Predicts fire ignition probability, rate of spread, and intensity up to 10 days ahead.</p>
+                        <p>Core components:</p>
+                        <ul>
+                            <li><strong>Fuel moisture dynamics</strong> — dead and live fuel estimation using radiative transfer models.</li>
+                            <li><strong>Topographic fire indices</strong> — slope, aspect, and solar radiation influence.</li>
+                            <li><strong>Active fire assimilation</strong> — VIIRS and MODIS hotspots update short‑term forecasts.</li>
+                        </ul>
+                        <p>Used by land management agencies for pre‑positioning resources and public warnings.</p>
+                    `
+                },
+                carbon: {
+                    icon: 'fa-leaf',
+                    title: 'Carbon flux & full budget',
+                    description: `
+                        <p><strong>Terrestrial carbon cycle monitoring:</strong> Estimates Net Ecosystem Exchange (NEE), Gross Primary Productivity (GPP), and ecosystem respiration (Rh) at 1‑km resolution globally. The model ingests FLUXNET tower data, satellite greenness, and meteorological drivers.</p>
+                        <p>Features include:</p>
+                        <ul>
+                            <li><strong>Partitioning algorithms</strong> — separate GPP and respiration using night‑time temperature response.</li>
+                            <li><strong>Uncertainty quantification</strong> — Bayesian neural networks provide credible intervals.</li>
+                            <li><strong>Attribution</strong> — SHAP values show drivers of carbon uptake (temperature, light, water).</li>
+                        </ul>
+                        <p>Supports national greenhouse gas inventories and nature‑based solution projects.</p>
+                    `
+                },
+                biodiversity: {
+                    icon: 'fa-dove',
+                    title: 'Biodiversity & habitat suitability',
+                    description: `
+                        <p><strong>Species distribution and habitat modeling:</strong> Uses ensemble machine learning (random forest, MaxEnt, neural networks) to map habitat suitability for thousands of vertebrate and plant species. Integrates climate, land cover, and human footprint layers.</p>
+                        <p>Delivered products:</p>
+                        <ul>
+                            <li><strong>Richness hotspots</strong> — stacked species probabilities identify conservation priorities.</li>
+                            <li><strong>Fragmentation analysis</strong> — connectivity metrics and corridor design.</li>
+                            <li><strong>Climate refugia</strong> — areas likely to retain suitable conditions under future scenarios.</li>
+                        </ul>
+                        <p>Explanable AI (SHAP) reveals which environmental factors most influence distribution.</p>
+                    `
+                }
+            };
 
-        async function loadMetrics() {
-            try {
-                const response = await fetch('/api/metrics');
-                const metrics = await response.json();
+            // attach click event to each core button
+            document.querySelectorAll('.core-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const featureKey = btn.getAttribute('data-feature');
+                    const data = featureDetails[featureKey] || featureDetails['biome'];
 
-                const metricsGrid = document.getElementById('metricsGrid');
-                metricsGrid.innerHTML = '';
+                    // update modal content
+                    modalIcon.className = `fas ${data.icon} modal-icon`;
+                    modalTitle.textContent = data.title;
+                    modalDesc.innerHTML = data.description;  // rich HTML
 
-                metrics.slice(0, 6).forEach(metric => {
-                    const metricItem = document.createElement('div');
-                    metricItem.className = 'metric-item';
-                    metricItem.innerHTML = `
-                        <div class="metric-name">${metric.label}</div>
-                        <div class="metric-value">Predictable</div>
-                    `;
-                    metricsGrid.appendChild(metricItem);
+                    // ***** FIX: reset scroll position to top *****
+                    if (modalContentDiv) {
+                        modalContentDiv.scrollTop = 0;
+                    }
+
+                    modalOverlay.classList.add('show');
                 });
-            } catch (error) {
-                console.error('Error loading metrics:', error);
-                // Fallback metrics
-                const fallbackMetrics = [
-                    'Avg Temperature (°C)', 'CO2 Emissions', 'Sea Level Rise',
-                    'Rainfall (mm)', 'Forest Area (%)', 'Renewable Energy (%)'
-                ];
+            });
 
-                const metricsGrid = document.getElementById('metricsGrid');
-                fallbackMetrics.forEach(metric => {
-                    const metricItem = document.createElement('div');
-                    metricItem.className = 'metric-item';
-                    metricItem.innerHTML = `
-                        <div class="metric-name">${metric}</div>
-                        <div class="metric-value">Predictable</div>
-                    `;
-                    metricsGrid.appendChild(metricItem);
-                });
-            }
-        }
+            // close modal
+            closeBtn.addEventListener('click', () => {
+                modalOverlay.classList.remove('show');
+            });
 
-        // Load data on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            loadStats();
-            loadMetrics();
-        });
-
-        // Add animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.style.opacity = '1';
-                    entry.target.style.transform = 'translateY(0)';
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    modalOverlay.classList.remove('show');
                 }
             });
-        }, observerOptions);
 
-        document.querySelectorAll('.feature-card, .step, .metric-item').forEach(el => {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(30px)';
-            el.style.transition = 'all 0.6s ease';
-            observer.observe(el);
-        });
+            // ripple effect on access cards
+            const cards = document.querySelectorAll('.access-card');
+            cards.forEach(card => {
+                card.addEventListener('click', function (e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    ripple.style.cssText = `
+                        position: absolute;
+                        border-radius: 50%;
+                        background: rgba(255, 255, 240, 0.25);
+                        transform: scale(0);
+                        animation: rippleFx 0.7s linear;
+                        width: ${size}px;
+                        height: ${size}px;
+                        top: ${y}px;
+                        left: ${x}px;
+                        pointer-events: none;
+                        z-index: 10;
+                    `;
+                    this.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 700);
+                });
+            });
+
+            const styleSheet = document.createElement("style");
+            styleSheet.textContent = `@keyframes rippleFx { to { transform: scale(4); opacity: 0; } }`;
+            document.head.appendChild(styleSheet);
+        })();
     </script>
 </body>
 
