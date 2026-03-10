@@ -5,8 +5,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import mysql.connector
-from mysql.connector import Error
+import sqlite3
 import os
 import json
 from datetime import datetime, timedelta
@@ -16,202 +15,240 @@ import io
 import re
 import secrets
 from functools import wraps
+from contextlib import contextmanager
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # For session management
 CORS(app)
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'Harshdeep*123',
-    'database': 'forest_prediction_db'
-}
+# SQLite database configuration
+DB_PATH = 'forest_prediction.db'
+
+# Context manager for database connections
+@contextmanager
+def get_db_connection():
+    conn = None
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row  # This enables column access by name
+        yield conn
+    except sqlite3.Error as e:
+        print(f"❌ Database connection error: {e}")
+        yield None
+    finally:
+        if conn:
+            conn.close()
+
+def execute_query(query, params=(), fetch_one=False, fetch_all=False, commit=False):
+    """Helper function to execute SQL queries"""
+    with get_db_connection() as conn:
+        if conn is None:
+            return None if not fetch_all else []
+        
+        cursor = conn.cursor()
+        try:
+            cursor.execute(query, params)
+            
+            if commit:
+                conn.commit()
+                return cursor.lastrowid
+            
+            if fetch_one:
+                result = cursor.fetchone()
+                return dict(result) if result else None
+            
+            if fetch_all:
+                results = cursor.fetchall()
+                return [dict(row) for row in results]
+            
+            return cursor
+        except sqlite3.Error as e:
+            print(f"❌ Query error: {e}")
+            if commit:
+                conn.rollback()
+            return None if not fetch_all else []
 
 # Initialize database with proper error handling
 def init_database():
+    """Initialize SQLite database with all tables"""
     try:
-        # First connect without database
-        connection = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
-        
-        cursor = connection.cursor()
-        
-        # Drop and create database
-        cursor.execute(f"DROP DATABASE IF EXISTS {DB_CONFIG['database']}")
-        cursor.execute(f"CREATE DATABASE {DB_CONFIG['database']}")
-        cursor.execute(f"USE {DB_CONFIG['database']}")
-        
-        # Create tables
-        cursor.execute('''
-            CREATE TABLE users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                uid VARCHAR(255) UNIQUE,
-                email VARCHAR(255) UNIQUE,
-                name VARCHAR(255),
-                photo_url TEXT,
-                provider VARCHAR(50),
-                role VARCHAR(50) DEFAULT 'user',
-                is_active BOOLEAN DEFAULT TRUE,
-                last_login TIMESTAMP NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        # SQLite doesn't need to create database separately, just connect
+        with get_db_connection() as conn:
+            if conn is None:
+                print("❌ Failed to connect to database")
+                return
+            
+            cursor = conn.cursor()
+            
+            # Create users table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uid TEXT UNIQUE,
+                    email TEXT UNIQUE,
+                    name TEXT,
+                    photo_url TEXT,
+                    provider TEXT,
+                    role TEXT DEFAULT 'user',
+                    is_active INTEGER DEFAULT 1,
+                    last_login TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Create datasets table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS datasets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    file_path TEXT,
+                    row_count INTEGER DEFAULT 0,
+                    column_count INTEGER DEFAULT 0,
+                    is_primary INTEGER DEFAULT 0,
+                    is_default INTEGER DEFAULT 0,
+                    uploaded_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    description TEXT,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE(user_id, name)
+                )
+            ''')
+            
+            # Create predictions table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS predictions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    dataset_name TEXT,
+                    predicted_metric TEXT,
+                    year INTEGER,
+                    predicted_value REAL,
+                    accuracy REAL,
+                    prediction_type TEXT DEFAULT 'standard',
+                    prediction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    model_used TEXT DEFAULT 'linear_regression',
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # Create dataset_columns table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS dataset_columns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    dataset_name TEXT,
+                    column_name TEXT,
+                    data_type TEXT,
+                    is_numeric INTEGER DEFAULT 0,
+                    min_value REAL,
+                    max_value REAL,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # Create user_activity table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_activity (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    activity_type TEXT,
+                    description TEXT,
+                    ip_address TEXT,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # Create indexes for better performance
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_datasets_user ON datasets(user_id)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_predictions_date ON predictions(prediction_date)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_datasets_primary ON datasets(is_primary)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_datasets_name ON datasets(name)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)')
+            cursor.execute('CREATE INDEX IF NOT EXISTS idx_activity_user ON user_activity(user_id)')
+            
+            # Create default admin user if not exists
+            cursor.execute('''
+                INSERT OR IGNORE INTO users (uid, email, name, role, last_login) 
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', ('admin_local', 'admin@forestpredict.com', 'Admin User', 'admin'))
+            
+            conn.commit()
+            print("✅ Database initialized successfully")
+            
+            # Get admin ID and load forest_data if exists
+            admin = execute_query(
+                "SELECT id FROM users WHERE email = ?", 
+                ('admin@forestpredict.com',), 
+                fetch_one=True
             )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE datasets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                file_path VARCHAR(500),
-                row_count INT DEFAULT 0,
-                column_count INT DEFAULT 0,
-                is_primary BOOLEAN DEFAULT FALSE,
-                is_default BOOLEAN DEFAULT FALSE,
-                uploaded_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                description TEXT,
-                UNIQUE KEY unique_user_dataset (user_id, name),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE predictions (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255),
-                predicted_metric VARCHAR(255),
-                year INT,
-                predicted_value FLOAT,
-                accuracy FLOAT,
-                prediction_type VARCHAR(50) DEFAULT 'standard',
-                prediction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                model_used VARCHAR(100) DEFAULT 'linear_regression',
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE dataset_columns (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255),
-                column_name VARCHAR(255),
-                data_type VARCHAR(50),
-                is_numeric BOOLEAN DEFAULT FALSE,
-                min_value FLOAT,
-                max_value FLOAT,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE user_activity (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT,
-                activity_type VARCHAR(100),
-                description TEXT,
-                ip_address VARCHAR(45),
-                user_agent TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            )
-        ''')
-        
-        # Create indexes
-        cursor.execute('CREATE INDEX idx_predictions_user ON predictions(user_id)')
-        cursor.execute('CREATE INDEX idx_datasets_user ON datasets(user_id)')
-        cursor.execute('CREATE INDEX idx_predictions_date ON predictions(prediction_date)')
-        cursor.execute('CREATE INDEX idx_datasets_primary ON datasets(is_primary)')
-        cursor.execute('CREATE INDEX idx_datasets_name ON datasets(name)')
-        cursor.execute('CREATE INDEX idx_users_email ON users(email)')
-        cursor.execute('CREATE INDEX idx_activity_user ON user_activity(user_id)')
-        
-        # Create default admin user
-        cursor.execute('''
-            INSERT IGNORE INTO users (uid, email, name, role, last_login) 
-            VALUES (%s, %s, %s, %s, NOW())
-        ''', ('admin_local', 'admin@forestpredict.com', 'Admin User', 'admin'))
-        
-        connection.commit()
-        print("✅ Database initialized successfully")
-        
-        # Get admin ID
-        admin_id = get_admin_id(cursor)
-        
-        # Load default forest_data.csv for admin if it exists
-        if admin_id and os.path.exists('forest_data.csv'):
-            load_forest_data_for_admin(cursor, connection, admin_id)
-        
-        cursor.close()
-        connection.close()
-        
-    except Error as e:
+            
+            if admin and os.path.exists('forest_data.csv'):
+                load_forest_data_for_admin(admin['id'])
+            
+    except sqlite3.Error as e:
         print(f"❌ Error initializing database: {e}")
         traceback.print_exc()
 
-def get_admin_id(cursor):
-    """Get admin user ID"""
-    try:
-        cursor.execute("SELECT id FROM users WHERE email = 'admin@forestpredict.com'")
-        result = cursor.fetchone()
-        return result[0] if result else None
-    except:
-        return None
-
-def load_forest_data_for_admin(cursor, connection, admin_id):
+def load_forest_data_for_admin(admin_id):
     """Load the forest_data.csv for admin user"""
     try:
         df = pd.read_csv('forest_data.csv')
         print(f"📊 Loading forest_data.csv with {len(df)} rows and {len(df.columns)} columns for admin")
         
-        # Insert dataset for admin
-        cursor.execute(
-            """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (admin_id, 'forest_data', len(df), len(df.columns), True, True, 'Forest dataset with environmental metrics')
+        # Check if forest_data already exists for admin
+        existing = execute_query(
+            "SELECT id FROM datasets WHERE user_id = ? AND name = ?",
+            (admin_id, 'forest_data'),
+            fetch_one=True
         )
         
-        # Store column metadata for admin
+        if existing:
+            # Update existing dataset
+            execute_query(
+                """UPDATE datasets SET row_count = ?, column_count = ? 
+                   WHERE user_id = ? AND name = ?""",
+                (len(df), len(df.columns), admin_id, 'forest_data'),
+                commit=True
+            )
+            
+            # Delete old columns
+            execute_query(
+                "DELETE FROM dataset_columns WHERE user_id = ? AND dataset_name = ?",
+                (admin_id, 'forest_data'),
+                commit=True
+            )
+        else:
+            # Insert new dataset
+            execute_query(
+                """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (admin_id, 'forest_data', len(df), len(df.columns), 1, 1, 
+                 'Forest dataset with environmental metrics'),
+                commit=True
+            )
+        
+        # Insert column metadata
         for column in df.columns:
-            is_numeric = pd.api.types.is_numeric_dtype(df[column])
+            is_numeric = 1 if pd.api.types.is_numeric_dtype(df[column]) else 0
             min_val = float(df[column].min()) if is_numeric and len(df[column].dropna()) > 0 else None
             max_val = float(df[column].max()) if is_numeric and len(df[column].dropna()) > 0 else None
             
-            cursor.execute(
+            execute_query(
                 """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (admin_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (admin_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val),
+                commit=True
             )
         
-        connection.commit()
         print("✅ forest_data.csv loaded successfully for admin")
             
     except Exception as e:
         print(f"❌ Error loading forest_data.csv: {e}")
         traceback.print_exc()
-
-# Initialize database
-init_database()
-
-def get_db_connection():
-    """Create database connection with retry logic"""
-    try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"❌ Database connection error: {e}")
-        try:
-            init_database()
-            connection = mysql.connector.connect(**DB_CONFIG)
-            return connection
-        except:
-            return None
 
 def sanitize_filename(filename):
     """Remove invalid characters from filename"""
@@ -245,20 +282,17 @@ def get_current_user_id():
 def log_user_activity(user_id, activity_type, description, ip_address=None, user_agent=None):
     """Log user activity to database"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return
-        
-        cursor = connection.cursor()
-        cursor.execute('''
-            INSERT INTO user_activity (user_id, activity_type, description, ip_address, user_agent)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (user_id, activity_type, description, ip_address, user_agent))
-        connection.commit()
-        cursor.close()
-        connection.close()
+        execute_query(
+            '''INSERT INTO user_activity (user_id, activity_type, description, ip_address, user_agent)
+               VALUES (?, ?, ?, ?, ?)''',
+            (user_id, activity_type, description, ip_address, user_agent),
+            commit=True
+        )
     except Exception as e:
         print(f"Error logging activity: {e}")
+
+# Initialize database
+init_database()
 
 @app.route('/')
 def index():
@@ -297,47 +331,48 @@ def firebase_login():
         if not uid or not email:
             return jsonify({'success': False, 'message': 'Missing user information'})
         
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor(dictionary=True)
-        
         # Check if user exists
-        cursor.execute("SELECT * FROM users WHERE uid = %s OR email = %s", (uid, email))
-        user = cursor.fetchone()
+        user = execute_query(
+            "SELECT * FROM users WHERE uid = ? OR email = ?",
+            (uid, email),
+            fetch_one=True
+        )
         
         if user:
             # Update existing user
-            cursor.execute('''
-                UPDATE users 
-                SET name = %s, photo_url = %s, provider = %s, last_login = NOW()
-                WHERE id = %s
-            ''', (name, photo_url, provider, user['id']))
+            execute_query(
+                '''UPDATE users 
+                   SET name = ?, photo_url = ?, provider = ?, last_login = CURRENT_TIMESTAMP
+                   WHERE id = ?''',
+                (name, photo_url, provider, user['id']),
+                commit=True
+            )
             user_id = user['id']
             role = user['role']
             
             # Check if user has any datasets
-            cursor.execute("SELECT COUNT(*) as count FROM datasets WHERE user_id = %s", (user_id,))
-            dataset_count = cursor.fetchone()['count']
+            dataset_count = execute_query(
+                "SELECT COUNT(*) as count FROM datasets WHERE user_id = ?",
+                (user_id,),
+                fetch_one=True
+            )['count']
             
             # If user has no datasets, create forest_data for them
             if dataset_count == 0 and os.path.exists('forest_data.csv'):
-                create_forest_data_for_user(cursor, connection, user_id)
+                create_forest_data_for_user(user_id)
         else:
             # Create new user
-            cursor.execute('''
-                INSERT INTO users (uid, email, name, photo_url, provider, role, last_login)
-                VALUES (%s, %s, %s, %s, %s, %s, NOW())
-            ''', (uid, email, name, photo_url, provider, 'user'))
-            user_id = cursor.lastrowid
+            user_id = execute_query(
+                '''INSERT INTO users (uid, email, name, photo_url, provider, role, last_login)
+                   VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)''',
+                (uid, email, name, photo_url, provider, 'user'),
+                commit=True
+            )
             role = 'user'
             
             # Create forest_data dataset for new user if file exists
             if os.path.exists('forest_data.csv'):
-                create_forest_data_for_user(cursor, connection, user_id)
-        
-        connection.commit()
+                create_forest_data_for_user(user_id)
         
         # Log activity
         log_user_activity(
@@ -355,9 +390,6 @@ def firebase_login():
         session['role'] = role
         session['photo_url'] = photo_url
         
-        cursor.close()
-        connection.close()
-        
         return jsonify({
             'success': True,
             'user': {
@@ -374,29 +406,54 @@ def firebase_login():
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
-def create_forest_data_for_user(cursor, connection, user_id):
+def create_forest_data_for_user(user_id):
     """Create forest_data dataset for a specific user from forest_data.csv"""
     try:
         df = pd.read_csv('forest_data.csv')
         print(f"📊 Creating forest_data for user {user_id} with {len(df)} rows")
         
-        # Insert dataset for user
-        cursor.execute(
-            """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (user_id, 'forest_data', len(df), len(df.columns), True, True, 'Forest dataset with environmental metrics')
+        # Check if forest_data already exists for this user
+        existing = execute_query(
+            "SELECT id FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, 'forest_data'),
+            fetch_one=True
         )
+        
+        if existing:
+            # Update existing dataset
+            execute_query(
+                "UPDATE datasets SET row_count = ?, column_count = ? WHERE user_id = ? AND name = ?",
+                (len(df), len(df.columns), user_id, 'forest_data'),
+                commit=True
+            )
+            
+            # Delete old columns
+            execute_query(
+                "DELETE FROM dataset_columns WHERE user_id = ? AND dataset_name = ?",
+                (user_id, 'forest_data'),
+                commit=True
+            )
+        else:
+            # Insert new dataset
+            execute_query(
+                """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, 'forest_data', len(df), len(df.columns), 1, 1, 
+                 'Forest dataset with environmental metrics'),
+                commit=True
+            )
         
         # Store column metadata for user
         for column in df.columns:
-            is_numeric = pd.api.types.is_numeric_dtype(df[column])
+            is_numeric = 1 if pd.api.types.is_numeric_dtype(df[column]) else 0
             min_val = float(df[column].min()) if is_numeric and len(df[column].dropna()) > 0 else None
             max_val = float(df[column].max()) if is_numeric and len(df[column].dropna()) > 0 else None
             
-            cursor.execute(
+            execute_query(
                 """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val),
+                commit=True
             )
         
         print(f"✅ forest_data.csv created successfully for user {user_id}")
@@ -416,42 +473,41 @@ def admin_login():
         # Hardcoded admin credentials
         if username == 'admin' and password == 'Harshdeep*123':
             
-            connection = get_db_connection()
-            if connection:
-                cursor = connection.cursor(dictionary=True)
-                
-                # Get or create admin user
-                cursor.execute("SELECT * FROM users WHERE email = 'admin@forestpredict.com'")
-                admin_user = cursor.fetchone()
-                
-                if admin_user:
-                    # Update last login
-                    cursor.execute("UPDATE users SET last_login = NOW() WHERE id = %s", (admin_user['id'],))
-                    user_id = admin_user['id']
-                else:
-                    # Create admin user
-                    cursor.execute('''
-                        INSERT INTO users (uid, email, name, role, last_login)
-                        VALUES (%s, %s, %s, %s, NOW())
-                    ''', ('admin_local', 'admin@forestpredict.com', 'Admin User', 'admin'))
-                    user_id = cursor.lastrowid
-                
-                connection.commit()
-                
-                # Log activity
-                log_user_activity(
-                    user_id,
-                    'admin_login',
-                    'Admin logged in',
-                    request.remote_addr,
-                    request.user_agent.string
+            # Get or create admin user
+            admin_user = execute_query(
+                "SELECT * FROM users WHERE email = ?",
+                ('admin@forestpredict.com',),
+                fetch_one=True
+            )
+            
+            if admin_user:
+                # Update last login
+                execute_query(
+                    "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
+                    (admin_user['id'],),
+                    commit=True
                 )
-                
-                cursor.close()
-                connection.close()
+                user_id = admin_user['id']
+            else:
+                # Create admin user
+                user_id = execute_query(
+                    '''INSERT INTO users (uid, email, name, role, last_login)
+                       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)''',
+                    ('admin_local', 'admin@forestpredict.com', 'Admin User', 'admin'),
+                    commit=True
+                )
+            
+            # Log activity
+            log_user_activity(
+                user_id,
+                'admin_login',
+                'Admin logged in',
+                request.remote_addr,
+                request.user_agent.string
+            )
             
             # Set session
-            session['user_id'] = user_id if 'user_id' in locals() else 1
+            session['user_id'] = user_id
             session['email'] = 'admin@forestpredict.com'
             session['name'] = 'Admin User'
             session['role'] = 'admin'
@@ -459,7 +515,7 @@ def admin_login():
             return jsonify({
                 'success': True,
                 'user': {
-                    'id': user_id if 'user_id' in locals() else 1,
+                    'id': user_id,
                     'email': 'admin@forestpredict.com',
                     'name': 'Admin User',
                     'role': 'admin'
@@ -509,70 +565,76 @@ def check_session():
     else:
         return jsonify({'success': True, 'authenticated': False})
 
-# User-specific Stats - Each user sees their own stats only
+# User-specific Stats
 @app.route('/api/stats', methods=['GET'])
 @login_required
 def get_stats():
-    """Get user-specific system statistics - each user sees their own data only"""
+    """Get user-specific system statistics"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({
-                'success': False, 
-                'message': 'Database connection failed',
-                'total_records': 0,
-                'total_datasets': 0,
-                'total_predictions': 0,
-                'start_year': 2000,
-                'end_year': 2023,
-                'has_user_data': False
-            })
-        
-        cursor = connection.cursor(dictionary=True)
         
         # Get total records for THIS USER ONLY
-        cursor.execute("SELECT COALESCE(SUM(row_count), 0) as total_records FROM datasets WHERE user_id = %s", (user_id,))
-        total_records = cursor.fetchone()['total_records']
+        total_records_result = execute_query(
+            "SELECT COALESCE(SUM(row_count), 0) as total_records FROM datasets WHERE user_id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        total_records = total_records_result['total_records'] if total_records_result else 0
         
-        # Get number of datasets for THIS USER ONLY
-        cursor.execute("SELECT COUNT(*) as total_datasets FROM datasets WHERE user_id = %s", (user_id,))
-        total_datasets = cursor.fetchone()['total_datasets']
+        # Get number of datasets
+        datasets_count = execute_query(
+            "SELECT COUNT(*) as total_datasets FROM datasets WHERE user_id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        total_datasets = datasets_count['total_datasets'] if datasets_count else 0
         
-        # Get number of predictions for THIS USER ONLY
-        cursor.execute("SELECT COUNT(*) as total_predictions FROM predictions WHERE user_id = %s", (user_id,))
-        total_predictions = cursor.fetchone()['total_predictions']
+        # Get number of predictions
+        predictions_count = execute_query(
+            "SELECT COUNT(*) as total_predictions FROM predictions WHERE user_id = ?",
+            (user_id,),
+            fetch_one=True
+        )
+        total_predictions = predictions_count['total_predictions'] if predictions_count else 0
         
-        # Check if user has uploaded custom data (excluding default forest_data)
-        cursor.execute("SELECT COUNT(*) as user_datasets FROM datasets WHERE user_id = %s AND is_default = FALSE", (user_id,))
-        user_datasets = cursor.fetchone()['user_datasets']
-        has_user_data = user_datasets > 0
+        # Check if user has uploaded custom data
+        user_datasets = execute_query(
+            "SELECT COUNT(*) as user_datasets FROM datasets WHERE user_id = ? AND is_default = 0",
+            (user_id,),
+            fetch_one=True
+        )
+        has_user_data = user_datasets['user_datasets'] > 0 if user_datasets else False
         
         # Get year range from user's primary dataset
         start_year = 2000
         end_year = 2023
         
-        cursor.execute("SELECT name FROM datasets WHERE user_id = %s AND is_primary = TRUE", (user_id,))
-        primary_dataset = cursor.fetchone()
+        primary_dataset = execute_query(
+            "SELECT name FROM datasets WHERE user_id = ? AND is_primary = 1",
+            (user_id,),
+            fetch_one=True
+        )
+        
         if primary_dataset:
             dataset_name = primary_dataset['name']
-            cursor.execute("""
-                SELECT MIN(min_value) as min_year, MAX(max_value) as max_year 
-                FROM dataset_columns 
-                WHERE user_id = %s AND dataset_name = %s AND column_name = 'Year'
-            """, (user_id, dataset_name))
-            year_data = cursor.fetchone()
+            year_data = execute_query(
+                """SELECT MIN(min_value) as min_year, MAX(max_value) as max_year 
+                   FROM dataset_columns 
+                   WHERE user_id = ? AND dataset_name = ? AND column_name = 'Year'""",
+                (user_id, dataset_name),
+                fetch_one=True
+            )
             if year_data and year_data['min_year']:
                 start_year = int(year_data['min_year'])
                 end_year = int(year_data['max_year'])
         
-        # Get last update time for THIS USER
-        cursor.execute("SELECT MAX(uploaded_date) as last_updated FROM datasets WHERE user_id = %s", (user_id,))
-        last_updated_result = cursor.fetchone()
+        # Get last update time
+        last_updated_result = execute_query(
+            "SELECT MAX(uploaded_date) as last_updated FROM datasets WHERE user_id = ?",
+            (user_id,),
+            fetch_one=True
+        )
         last_updated = last_updated_result['last_updated'] if last_updated_result else None
-        
-        cursor.close()
-        connection.close()
         
         stats = {
             'success': True,
@@ -582,7 +644,7 @@ def get_stats():
             'start_year': start_year,
             'end_year': end_year,
             'has_user_data': has_user_data,
-            'last_updated': last_updated.isoformat() if last_updated else None
+            'last_updated': last_updated
         }
         
         return jsonify(stats)
@@ -611,44 +673,49 @@ def load_default_data():
         
         df = pd.read_csv('forest_data.csv')
         
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor()
-        
         # Check if user already has forest_data
-        cursor.execute("SELECT COUNT(*) FROM datasets WHERE user_id = %s AND name = 'forest_data'", (user_id,))
-        if cursor.fetchone()[0] > 0:
+        existing = execute_query(
+            "SELECT COUNT(*) as count FROM datasets WHERE user_id = ? AND name = 'forest_data'",
+            (user_id,),
+            fetch_one=True
+        )
+        
+        if existing and existing['count'] > 0:
             # Update existing forest_data
-            cursor.execute("UPDATE datasets SET row_count = %s, column_count = %s WHERE user_id = %s AND name = 'forest_data'", 
-                          (len(df), len(df.columns), user_id))
+            execute_query(
+                "UPDATE datasets SET row_count = ?, column_count = ? WHERE user_id = ? AND name = 'forest_data'",
+                (len(df), len(df.columns), user_id),
+                commit=True
+            )
             
             # Delete old columns
-            cursor.execute("DELETE FROM dataset_columns WHERE user_id = %s AND dataset_name = 'forest_data'", (user_id,))
+            execute_query(
+                "DELETE FROM dataset_columns WHERE user_id = ? AND dataset_name = 'forest_data'",
+                (user_id,),
+                commit=True
+            )
         else:
             # Insert new forest_data
-            cursor.execute(
+            execute_query(
                 """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, 'forest_data', len(df), len(df.columns), True, True, 'Forest dataset with environmental metrics')
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, 'forest_data', len(df), len(df.columns), 1, 1, 
+                 'Forest dataset with environmental metrics'),
+                commit=True
             )
         
         # Insert column metadata
         for column in df.columns:
-            is_numeric = pd.api.types.is_numeric_dtype(df[column])
+            is_numeric = 1 if pd.api.types.is_numeric_dtype(df[column]) else 0
             min_val = float(df[column].min()) if is_numeric and len(df[column].dropna()) > 0 else None
             max_val = float(df[column].max()) if is_numeric and len(df[column].dropna()) > 0 else None
             
-            cursor.execute(
+            execute_query(
                 """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val),
+                commit=True
             )
-        
-        connection.commit()
-        cursor.close()
-        connection.close()
         
         return jsonify({
             'success': True,
@@ -668,13 +735,9 @@ def get_datasets():
     """Get list of all datasets for current user"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify([])
         
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT 
+        datasets = execute_query(
+            """SELECT 
                 d.name,
                 d.row_count,
                 d.column_count,
@@ -682,17 +745,14 @@ def get_datasets():
                 d.is_default,
                 d.uploaded_date,
                 d.description,
-                COUNT(DISTINCT dc.column_name) as actual_columns
+                (SELECT COUNT(DISTINCT column_name) FROM dataset_columns dc 
+                 WHERE dc.user_id = d.user_id AND dc.dataset_name = d.name) as actual_columns
             FROM datasets d
-            LEFT JOIN dataset_columns dc ON d.name = dc.dataset_name AND dc.user_id = d.user_id
-            WHERE d.user_id = %s
-            GROUP BY d.id, d.name, d.row_count, d.column_count, d.is_primary, d.is_default, d.uploaded_date, d.description
-            ORDER BY d.is_primary DESC, d.uploaded_date DESC
-        """, (user_id,))
-        
-        datasets = cursor.fetchall()
-        cursor.close()
-        connection.close()
+            WHERE d.user_id = ?
+            ORDER BY d.is_primary DESC, d.uploaded_date DESC""",
+            (user_id,),
+            fetch_all=True
+        )
         
         # Format datasets
         formatted_datasets = []
@@ -703,7 +763,7 @@ def get_datasets():
                 'column_count': ds['actual_columns'] or ds['column_count'],
                 'is_primary': bool(ds['is_primary']),
                 'is_default': bool(ds['is_default']),
-                'uploaded_date': ds['uploaded_date'].isoformat() if ds['uploaded_date'] else None,
+                'uploaded_date': ds['uploaded_date'],
                 'description': ds['description']
             })
         
@@ -733,15 +793,11 @@ def get_dataset_data(dataset_name):
             return jsonify({'success': False, 'message': 'Dataset name required'})
         
         # Check if user has access to this dataset
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT file_path, is_default FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-        result = cursor.fetchone()
-        cursor.close()
-        connection.close()
+        result = execute_query(
+            "SELECT file_path, is_default FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, dataset_name),
+            fetch_one=True
+        )
         
         if not result:
             return jsonify({'success': False, 'message': f'Dataset "{dataset_name}" not found or access denied'})
@@ -798,25 +854,24 @@ def get_dataset_columns(dataset_name):
         if not dataset_name:
             return jsonify({'success': False, 'columns': []})
         
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'columns': []})
-        
-        cursor = connection.cursor(dictionary=True)
-        
         # First check if dataset exists for this user
-        cursor.execute("SELECT COUNT(*) as count FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-        if cursor.fetchone()['count'] == 0:
-            cursor.close()
-            connection.close()
+        count_result = execute_query(
+            "SELECT COUNT(*) as count FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, dataset_name),
+            fetch_one=True
+        )
+        
+        if not count_result or count_result['count'] == 0:
             return jsonify({'success': False, 'columns': []})
         
         # Get columns from metadata for this user
-        cursor.execute("SELECT column_name FROM dataset_columns WHERE user_id = %s AND dataset_name = %s", (user_id, dataset_name))
-        columns = [row['column_name'] for row in cursor.fetchall()]
+        columns_result = execute_query(
+            "SELECT column_name FROM dataset_columns WHERE user_id = ? AND dataset_name = ?",
+            (user_id, dataset_name),
+            fetch_all=True
+        )
         
-        cursor.close()
-        connection.close()
+        columns = [row['column_name'] for row in columns_result]
         
         if columns:
             return jsonify({'success': True, 'columns': columns})
@@ -844,18 +899,14 @@ def get_row_identifiers(dataset_name):
         if not dataset_name:
             return jsonify({'success': False, 'message': 'Dataset name required'})
 
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT COUNT(*) as count FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-        if cursor.fetchone()['count'] == 0:
-            cursor.close()
-            connection.close()
+        count_result = execute_query(
+            "SELECT COUNT(*) as count FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, dataset_name),
+            fetch_one=True
+        )
+        
+        if not count_result or count_result['count'] == 0:
             return jsonify({'success': False, 'message': 'Dataset not found or access denied'})
-        cursor.close()
-        connection.close()
 
         dataset_response = get_dataset_data(dataset_name)
         resp_json = dataset_response.get_json()
@@ -889,7 +940,7 @@ def get_row_identifiers(dataset_name):
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def upload_file():
-    """Handle file upload for current user - visible to admin"""
+    """Handle file upload for current user"""
     try:
         user_id = get_current_user_id()
         if 'file' not in request.files:
@@ -923,15 +974,14 @@ def upload_file():
         base_name = sanitize_filename(os.path.splitext(file.filename)[0])
         dataset_name = base_name
         
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor()
-        
         # Check if dataset name exists for this user
-        cursor.execute("SELECT COUNT(*) FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-        if cursor.fetchone()[0] > 0:
+        existing = execute_query(
+            "SELECT COUNT(*) as count FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, dataset_name),
+            fetch_one=True
+        )
+        
+        if existing and existing['count'] > 0:
             # Append timestamp to make unique
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             dataset_name = f"{base_name}_{timestamp}"
@@ -951,25 +1001,25 @@ def upload_file():
             return jsonify({'success': False, 'message': 'Failed to save file'})
         
         # Insert into database for this user
-        cursor.execute(
+        execute_query(
             """INSERT INTO datasets (user_id, name, file_path, row_count, column_count, description) 
-            VALUES (%s, %s, %s, %s, %s, %s)""",
-            (user_id, dataset_name, file_path, len(df), len(df.columns), f"Uploaded: {file.filename}")
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, dataset_name, file_path, len(df), len(df.columns), f"Uploaded: {file.filename}"),
+            commit=True
         )
         
         # Store column metadata for this user
         for column in df.columns:
-            is_numeric = pd.api.types.is_numeric_dtype(df[column])
+            is_numeric = 1 if pd.api.types.is_numeric_dtype(df[column]) else 0
             min_val = float(df[column].min()) if is_numeric and len(df[column].dropna()) > 0 else None
             max_val = float(df[column].max()) if is_numeric and len(df[column].dropna()) > 0 else None
             
-            cursor.execute(
+            execute_query(
                 """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (user_id, dataset_name, column, str(df[column].dtype), is_numeric, min_val, max_val)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, dataset_name, column, str(df[column].dtype), is_numeric, min_val, max_val),
+                commit=True
             )
-        
-        connection.commit()
         
         # Log the upload activity
         log_user_activity(
@@ -979,9 +1029,6 @@ def upload_file():
             request.remote_addr,
             request.user_agent.string
         )
-        
-        cursor.close()
-        connection.close()
         
         print(f"✅ User {user_id} uploaded dataset: {dataset_name} with {len(df)} rows")
         
@@ -1011,55 +1058,52 @@ def manage_datasets():
         if not action or not dataset_name:
             return jsonify({'success': False, 'message': 'Missing parameters'})
         
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor()
-        
         if action == 'set_primary':
             # Reset all primary flags for this user
-            cursor.execute("UPDATE datasets SET is_primary = FALSE WHERE user_id = %s", (user_id,))
+            execute_query(
+                "UPDATE datasets SET is_primary = 0 WHERE user_id = ?",
+                (user_id,),
+                commit=True
+            )
             
             # Set the selected dataset as primary for this user
-            cursor.execute("UPDATE datasets SET is_primary = TRUE WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-            
-            connection.commit()
-            cursor.close()
-            connection.close()
+            execute_query(
+                "UPDATE datasets SET is_primary = 1 WHERE user_id = ? AND name = ?",
+                (user_id, dataset_name),
+                commit=True
+            )
             
             return jsonify({'success': True, 'message': f'✅ Dataset "{dataset_name}" set as primary'})
         
         elif action == 'delete':
             # Don't allow deletion of default forest_data
             if dataset_name == 'forest_data':
-                cursor.close()
-                connection.close()
                 return jsonify({'success': False, 'message': 'Cannot delete default forest_data dataset'})
             
             # Get file path to delete physical file
-            cursor.execute("SELECT file_path FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-            result = cursor.fetchone()
+            result = execute_query(
+                "SELECT file_path FROM datasets WHERE user_id = ? AND name = ?",
+                (user_id, dataset_name),
+                fetch_one=True
+            )
             
             # Delete from database
-            cursor.execute("DELETE FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-            connection.commit()
+            execute_query(
+                "DELETE FROM datasets WHERE user_id = ? AND name = ?",
+                (user_id, dataset_name),
+                commit=True
+            )
             
             # Delete physical file
-            if result and result[0] and os.path.exists(result[0]):
+            if result and result['file_path'] and os.path.exists(result['file_path']):
                 try:
-                    os.remove(result[0])
+                    os.remove(result['file_path'])
                 except Exception as e:
                     print(f"Warning: Could not delete file: {e}")
-            
-            cursor.close()
-            connection.close()
             
             return jsonify({'success': True, 'message': f'✅ Dataset "{dataset_name}" deleted successfully'})
         
         else:
-            cursor.close()
-            connection.close()
             return jsonify({'success': False, 'message': f'Unknown action: {action}'})
         
     except Exception as e:
@@ -1073,40 +1117,39 @@ def get_metrics():
     """Get available metrics for prediction for current user"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify([])
-        
-        cursor = connection.cursor(dictionary=True)
         
         # Get primary dataset name for this user
-        cursor.execute("SELECT name FROM datasets WHERE user_id = %s AND is_primary = TRUE", (user_id,))
-        primary_result = cursor.fetchone()
+        primary_result = execute_query(
+            "SELECT name FROM datasets WHERE user_id = ? AND is_primary = 1",
+            (user_id,),
+            fetch_one=True
+        )
         
         if not primary_result:
             # If no primary, get forest_data for this user
-            cursor.execute("SELECT name FROM datasets WHERE user_id = %s AND name = 'forest_data' LIMIT 1", (user_id,))
-            forest_result = cursor.fetchone()
+            forest_result = execute_query(
+                "SELECT name FROM datasets WHERE user_id = ? AND name = 'forest_data' LIMIT 1",
+                (user_id,),
+                fetch_one=True
+            )
             dataset_name = forest_result['name'] if forest_result else None
         else:
             dataset_name = primary_result['name']
         
         if not dataset_name:
-            cursor.close()
-            connection.close()
             return jsonify([])
         
         # Get numeric columns for this user's dataset
-        cursor.execute("""
-            SELECT column_name 
-            FROM dataset_columns 
-            WHERE user_id = %s AND dataset_name = %s AND is_numeric = TRUE
-            ORDER BY column_name
-        """, (user_id, dataset_name))
+        numeric_columns_result = execute_query(
+            """SELECT column_name 
+               FROM dataset_columns 
+               WHERE user_id = ? AND dataset_name = ? AND is_numeric = 1
+               ORDER BY column_name""",
+            (user_id, dataset_name),
+            fetch_all=True
+        )
         
-        numeric_columns = [row['column_name'] for row in cursor.fetchall()]
-        cursor.close()
-        connection.close()
+        numeric_columns = [row['column_name'] for row in numeric_columns_result]
         
         # Create metric list with labels
         metrics = []
@@ -1130,7 +1173,7 @@ def get_metrics():
         traceback.print_exc()
         return jsonify([])
 
-# Add this new endpoint for debugging dataset structure
+# Debug endpoint
 @app.route('/api/debug-dataset/<dataset_name>', methods=['GET'])
 @login_required
 def debug_dataset(dataset_name):
@@ -1194,7 +1237,7 @@ def debug_dataset(dataset_name):
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
-# Updated prediction endpoint with better data handling
+# Prediction endpoint
 @app.route('/api/predict', methods=['POST'])
 @login_required
 def make_prediction():
@@ -1216,14 +1259,12 @@ def make_prediction():
 
         # Use primary dataset for this user if none specified
         if not dataset_name:
-            connection = get_db_connection()
-            if connection:
-                cursor = connection.cursor()
-                cursor.execute("SELECT name FROM datasets WHERE user_id = %s AND is_primary = TRUE", (user_id,))
-                result = cursor.fetchone()
-                dataset_name = result[0] if result else 'forest_data'
-                cursor.close()
-                connection.close()
+            primary_result = execute_query(
+                "SELECT name FROM datasets WHERE user_id = ? AND is_primary = 1",
+                (user_id,),
+                fetch_one=True
+            )
+            dataset_name = primary_result['name'] if primary_result else 'forest_data'
 
         # Get dataset data
         dataset_response = get_dataset_data(dataset_name)
@@ -1238,9 +1279,7 @@ def make_prediction():
         if df.empty:
             return jsonify({'success': False, 'message': 'Dataset is empty'})
 
-        # Special handling for forest_data.csv (wide format: Country Name + year columns as headers)
-        # Only melt if the dataframe does NOT already have a proper 'Year' column
-        # AND the non-identifier columns look like year numbers (e.g. '2000', '2001', ...)
+        # Special handling for forest_data.csv (wide format)
         if 'Country Name' in df.columns and 'Year' not in df.columns:
             year_like_cols = [col for col in df.columns
                               if col != 'Country Name' and str(col).strip().replace('.', '').isdigit()]
@@ -1264,7 +1303,7 @@ def make_prediction():
                 except:
                     pass
 
-        # Find Year column (case-insensitive search)
+        # Find Year column
         year_column = None
         for col in df.columns:
             if 'year' in col.lower():
@@ -1275,7 +1314,6 @@ def make_prediction():
             if year_column != 'Year':
                 df = df.rename(columns={year_column: 'Year'})
         else:
-            # If no year column found, create one from index
             print("⚠️ No year column found, using row index as year")
             df['Year'] = range(len(df))
 
@@ -1296,7 +1334,6 @@ def make_prediction():
         # Apply filter if specified
         if filter_column and filter_value:
             if filter_column not in df.columns:
-                # Try to find a matching column
                 for col in df.columns:
                     if filter_column.lower() in col.lower():
                         filter_column = col
@@ -1304,17 +1341,14 @@ def make_prediction():
                 else:
                     return jsonify({'success': False, 'message': f'Filter column "{filter_column}" not found. Available columns: {df.columns.tolist()}'})
             
-            # Convert to string for comparison
             df[filter_column] = df[filter_column].astype(str)
             df = df[df[filter_column] == str(filter_value)]
             
             if df.empty:
-                # Try partial matching
                 df = pd.DataFrame(dataset_response.json.get('data', []))
                 if 'Country Name' in df.columns:
                     df = df[df['Country Name'].str.contains(str(filter_value), case=False, na=False)]
                     if not df.empty:
-                        # Melt again
                         df = pd.melt(df, id_vars=['Country Name'], var_name='Year', value_name='Forest Area (%)')
                         df['Year'] = pd.to_numeric(df['Year'], errors='coerce')
                         df['Forest Area (%)'] = pd.to_numeric(df['Forest Area (%)'], errors='coerce')
@@ -1326,14 +1360,12 @@ def make_prediction():
             
             print(f"📊 After filtering: {len(df)} rows for {filter_value}")
 
-        # ── ROW-WISE: predict ALL numeric columns for the selected row ──
+        # ROW-WISE: predict ALL numeric columns for the selected row
         if not metric and (filter_column or country_column):
-            # Get all numeric columns
             numeric_cols = []
             for col in df.columns:
                 if col != 'Year' and col != filter_column and col != country_column:
                     if pd.api.types.is_numeric_dtype(df[col]):
-                        # Check if column has enough non-null values
                         if df[col].notna().sum() >= 3:
                             numeric_cols.append(col)
                         else:
@@ -1342,11 +1374,9 @@ def make_prediction():
             print(f"📊 Numeric columns with sufficient data: {numeric_cols}")
             
             if not numeric_cols:
-                # If no numeric columns found with sufficient data, try to use Forest Area (%) if it exists
                 if 'Forest Area (%)' in df.columns and df['Forest Area (%)'].notna().sum() >= 3:
                     numeric_cols = ['Forest Area (%)']
                 else:
-                    # Show all columns and their status
                     debug_info = []
                     for col in df.columns:
                         if col != 'Year':
@@ -1361,11 +1391,9 @@ def make_prediction():
 
             all_predictions = []
             for col in numeric_cols:
-                # Clean data for this column
                 df_clean = df[['Year', col]].copy()
                 df_clean = df_clean.dropna()
                 
-                # Ensure proper types
                 df_clean['Year'] = pd.to_numeric(df_clean['Year'], errors='coerce')
                 df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
                 df_clean = df_clean.dropna()
@@ -1401,17 +1429,12 @@ def make_prediction():
 
                 # Save each prediction to DB
                 try:
-                    conn = get_db_connection()
-                    if conn:
-                        cur = conn.cursor()
-                        cur.execute(
-                            """INSERT INTO predictions (user_id, dataset_name, predicted_metric, year, predicted_value, accuracy, prediction_type)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                            (user_id, dataset_name, col, target_year, float(prediction), float(accuracy), 'row_wise')
-                        )
-                        conn.commit()
-                        cur.close()
-                        conn.close()
+                    execute_query(
+                        """INSERT INTO predictions (user_id, dataset_name, predicted_metric, year, predicted_value, accuracy, prediction_type)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                        (user_id, dataset_name, col, target_year, float(prediction), float(accuracy), 'row_wise'),
+                        commit=True
+                    )
                 except Exception as e:
                     print(f"⚠️ Error saving prediction to DB: {e}")
 
@@ -1431,9 +1454,8 @@ def make_prediction():
                 'predictions': all_predictions
             })
 
-        # ── COLUMN-WISE: predict a specific metric ──
+        # COLUMN-WISE: predict a specific metric
         if metric:
-            # Find the metric column (case-insensitive)
             metric_column = None
             for col in df.columns:
                 if metric.lower() in col.lower():
@@ -1443,7 +1465,6 @@ def make_prediction():
             if not metric_column:
                 return jsonify({'success': False, 'message': f'Metric "{metric}" not found. Available columns: {df.columns.tolist()}'})
             
-            # Convert metric column to numeric
             df[metric_column] = pd.to_numeric(df[metric_column], errors='coerce')
             
             df_clean = df[['Year', metric_column]].copy()
@@ -1472,17 +1493,12 @@ def make_prediction():
 
             # Save to database
             try:
-                connection = get_db_connection()
-                if connection:
-                    cursor = connection.cursor()
-                    cursor.execute(
-                        """INSERT INTO predictions (user_id, dataset_name, predicted_metric, year, predicted_value, accuracy, prediction_type)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                        (user_id, dataset_name, metric_column, target_year, float(prediction), float(accuracy), prediction_type)
-                    )
-                    connection.commit()
-                    cursor.close()
-                    connection.close()
+                execute_query(
+                    """INSERT INTO predictions (user_id, dataset_name, predicted_metric, year, predicted_value, accuracy, prediction_type)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (user_id, dataset_name, metric_column, target_year, float(prediction), float(accuracy), prediction_type),
+                    commit=True
+                )
             except Exception as e:
                 print(f"⚠️ Error saving prediction to DB: {e}")
 
@@ -1509,22 +1525,12 @@ def get_predictions():
     """Get all predictions for current user"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify([])
         
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM predictions WHERE user_id = %s ORDER BY prediction_date DESC", (user_id,))
-        
-        predictions = cursor.fetchall()
-        
-        # Format dates
-        for pred in predictions:
-            if pred['prediction_date']:
-                pred['prediction_date'] = pred['prediction_date'].isoformat()
-        
-        cursor.close()
-        connection.close()
+        predictions = execute_query(
+            "SELECT * FROM predictions WHERE user_id = ? ORDER BY prediction_date DESC",
+            (user_id,),
+            fetch_all=True
+        )
         
         return jsonify(predictions)
         
@@ -1538,19 +1544,14 @@ def delete_prediction(prediction_id):
     """Delete a specific prediction for current user"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
         
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM predictions WHERE id = %s AND user_id = %s", (prediction_id, user_id))
-        connection.commit()
+        rows_deleted = execute_query(
+            "DELETE FROM predictions WHERE id = ? AND user_id = ?",
+            (prediction_id, user_id),
+            commit=True
+        )
         
-        rows_deleted = cursor.rowcount
-        cursor.close()
-        connection.close()
-        
-        if rows_deleted > 0:
+        if rows_deleted:
             return jsonify({'success': True, 'message': 'Prediction deleted successfully'})
         else:
             return jsonify({'success': False, 'message': 'Prediction not found or access denied'})
@@ -1565,16 +1566,12 @@ def clear_predictions():
     """Clear all predictions for current user"""
     try:
         user_id = get_current_user_id()
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
         
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM predictions WHERE user_id = %s", (user_id,))
-        connection.commit()
-        
-        cursor.close()
-        connection.close()
+        execute_query(
+            "DELETE FROM predictions WHERE user_id = ?",
+            (user_id,),
+            commit=True
+        )
         
         return jsonify({'success': True, 'message': 'All predictions cleared successfully'})
         
@@ -1591,16 +1588,12 @@ def get_chart_data():
     
     try:
         # Get primary dataset for this user
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'data': []})
-        
-        cursor = connection.cursor()
-        cursor.execute("SELECT name FROM datasets WHERE user_id = %s AND is_primary = TRUE", (user_id,))
-        result = cursor.fetchone()
-        dataset_name = result[0] if result else 'forest_data'
-        cursor.close()
-        connection.close()
+        primary_result = execute_query(
+            "SELECT name FROM datasets WHERE user_id = ? AND is_primary = 1",
+            (user_id,),
+            fetch_one=True
+        )
+        dataset_name = primary_result['name'] if primary_result else 'forest_data'
         
         # Get dataset data
         dataset_response = get_dataset_data(dataset_name)
@@ -1663,17 +1656,13 @@ def get_visualization_data(dataset_name):
     
     try:
         # Check if user has access to this dataset
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
+        count_result = execute_query(
+            "SELECT COUNT(*) as count FROM datasets WHERE user_id = ? AND name = ?",
+            (user_id, dataset_name),
+            fetch_one=True
+        )
         
-        cursor = connection.cursor()
-        cursor.execute("SELECT COUNT(*) FROM datasets WHERE user_id = %s AND name = %s", (user_id, dataset_name))
-        count = cursor.fetchone()[0]
-        cursor.close()
-        connection.close()
-        
-        if count == 0:
+        if not count_result or count_result['count'] == 0:
             return jsonify({'success': False, 'message': 'Dataset not found or access denied'})
         
         # Get dataset data
@@ -1724,43 +1713,21 @@ def get_visualization_data(dataset_name):
         print(f"❌ Error getting visualization data: {e}")
         return jsonify({'success': False, 'message': str(e)})
 
-# Admin routes remain unchanged
+# Admin routes
 @app.route('/api/admin/users', methods=['GET'])
 @admin_required
 def get_users():
     """Get all users for admin"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'users': []})
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        cursor.execute('''
-            SELECT 
+        users = execute_query(
+            '''SELECT 
                 u.*,
-                COUNT(DISTINCT a.id) as activity_count,
-                MAX(a.created_at) as last_activity
+                (SELECT COUNT(*) FROM user_activity a WHERE a.user_id = u.id) as activity_count,
+                (SELECT MAX(created_at) FROM user_activity a WHERE a.user_id = u.id) as last_activity
             FROM users u
-            LEFT JOIN user_activity a ON u.id = a.user_id
-            GROUP BY u.id
-            ORDER BY u.created_at DESC
-        ''')
-        
-        users = cursor.fetchall()
-        
-        for user in users:
-            if user['last_login']:
-                user['last_login'] = user['last_login'].isoformat() if user['last_login'] else None
-            if user['created_at']:
-                user['created_at'] = user['created_at'].isoformat() if user['created_at'] else None
-            if user['updated_at']:
-                user['updated_at'] = user['updated_at'].isoformat() if user['updated_at'] else None
-            if user['last_activity']:
-                user['last_activity'] = user['last_activity'].isoformat() if user['last_activity'] else None
-        
-        cursor.close()
-        connection.close()
+            ORDER BY u.created_at DESC''',
+            fetch_all=True
+        )
         
         return jsonify({'success': True, 'users': users})
         
@@ -1773,27 +1740,14 @@ def get_users():
 def get_user_activity(user_id):
     """Get activity for a specific user"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'activities': []})
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        cursor.execute('''
-            SELECT * FROM user_activity 
-            WHERE user_id = %s 
-            ORDER BY created_at DESC 
-            LIMIT 100
-        ''', (user_id,))
-        
-        activities = cursor.fetchall()
-        
-        for activity in activities:
-            if activity['created_at']:
-                activity['created_at'] = activity['created_at'].isoformat()
-        
-        cursor.close()
-        connection.close()
+        activities = execute_query(
+            '''SELECT * FROM user_activity 
+               WHERE user_id = ? 
+               ORDER BY created_at DESC 
+               LIMIT 100''',
+            (user_id,),
+            fetch_all=True
+        )
         
         return jsonify({'success': True, 'activities': activities})
         
@@ -1806,31 +1760,26 @@ def get_user_activity(user_id):
 def toggle_user_status(user_id):
     """Toggle user active status"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT is_active FROM users WHERE id = %s", (user_id,))
-        result = cursor.fetchone()
+        result = execute_query(
+            "SELECT is_active FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
         
         if not result:
-            cursor.close()
-            connection.close()
             return jsonify({'success': False, 'message': 'User not found'})
         
-        new_status = not result[0]
-        cursor.execute("UPDATE users SET is_active = %s WHERE id = %s", (new_status, user_id))
-        connection.commit()
-        
-        cursor.close()
-        connection.close()
+        new_status = 0 if result['is_active'] else 1
+        execute_query(
+            "UPDATE users SET is_active = ? WHERE id = ?",
+            (new_status, user_id),
+            commit=True
+        )
         
         return jsonify({
             'success': True, 
             'message': f'User {"activated" if new_status else "deactivated"} successfully',
-            'is_active': new_status
+            'is_active': bool(new_status)
         })
         
     except Exception as e:
@@ -1842,30 +1791,23 @@ def toggle_user_status(user_id):
 def delete_user(user_id):
     """Delete a user"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor()
-        
-        cursor.execute("SELECT role FROM users WHERE id = %s", (user_id,))
-        result = cursor.fetchone()
+        result = execute_query(
+            "SELECT role FROM users WHERE id = ?",
+            (user_id,),
+            fetch_one=True
+        )
         
         if not result:
-            cursor.close()
-            connection.close()
             return jsonify({'success': False, 'message': 'User not found'})
         
-        if result[0] == 'admin':
-            cursor.close()
-            connection.close()
+        if result['role'] == 'admin':
             return jsonify({'success': False, 'message': 'Cannot delete admin user'})
         
-        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
-        connection.commit()
-        
-        cursor.close()
-        connection.close()
+        execute_query(
+            "DELETE FROM users WHERE id = ?",
+            (user_id,),
+            commit=True
+        )
         
         return jsonify({'success': True, 'message': 'User deleted successfully'})
         
@@ -1878,63 +1820,71 @@ def delete_user(user_id):
 def get_admin_dashboard_stats():
     """Get admin dashboard statistics"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'stats': {}})
-        
-        cursor = connection.cursor(dictionary=True)
-        
         # Get user counts
-        cursor.execute("SELECT COUNT(*) as total_users FROM users")
-        total_users = cursor.fetchone()['total_users']
+        total_users_result = execute_query(
+            "SELECT COUNT(*) as total_users FROM users",
+            fetch_one=True
+        )
+        total_users = total_users_result['total_users'] if total_users_result else 0
         
-        cursor.execute("SELECT COUNT(*) as active_users FROM users WHERE is_active = TRUE")
-        active_users = cursor.fetchone()['active_users']
+        active_users_result = execute_query(
+            "SELECT COUNT(*) as active_users FROM users WHERE is_active = 1",
+            fetch_one=True
+        )
+        active_users = active_users_result['active_users'] if active_users_result else 0
         
-        cursor.execute("SELECT COUNT(*) as admin_users FROM users WHERE role = 'admin'")
-        admin_users = cursor.fetchone()['admin_users']
+        admin_users_result = execute_query(
+            "SELECT COUNT(*) as admin_users FROM users WHERE role = 'admin'",
+            fetch_one=True
+        )
+        admin_users = admin_users_result['admin_users'] if admin_users_result else 0
         
         # Get activity stats for last 7 days
-        cursor.execute('''
-            SELECT DATE(created_at) as date, COUNT(*) as count
-            FROM user_activity
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-            GROUP BY DATE(created_at)
-            ORDER BY date
-        ''')
-        activity_by_day = cursor.fetchall()
+        activity_by_day = execute_query(
+            '''SELECT DATE(created_at) as date, COUNT(*) as count
+               FROM user_activity
+               WHERE created_at >= DATE('now', '-7 days')
+               GROUP BY DATE(created_at)
+               ORDER BY date''',
+            fetch_all=True
+        )
         
         # Get activity types distribution
-        cursor.execute('''
-            SELECT activity_type, COUNT(*) as count
-            FROM user_activity
-            GROUP BY activity_type
-            ORDER BY count DESC
-        ''')
-        activity_types = cursor.fetchall()
+        activity_types = execute_query(
+            '''SELECT activity_type, COUNT(*) as count
+               FROM user_activity
+               GROUP BY activity_type
+               ORDER BY count DESC''',
+            fetch_all=True
+        )
         
-        # Get prediction stats - FIXED
-        cursor.execute("SELECT COUNT(*) as total_predictions FROM predictions")
-        total_predictions_result = cursor.fetchone()
+        # Get prediction stats
+        total_predictions_result = execute_query(
+            "SELECT COUNT(*) as total_predictions FROM predictions",
+            fetch_one=True
+        )
         total_predictions = total_predictions_result['total_predictions'] if total_predictions_result else 0
         
-        # Get dataset stats - FIXED
-        cursor.execute("SELECT COUNT(*) as total_datasets FROM datasets")
-        total_datasets_result = cursor.fetchone()
+        # Get dataset stats
+        total_datasets_result = execute_query(
+            "SELECT COUNT(*) as total_datasets FROM datasets",
+            fetch_one=True
+        )
         total_datasets = total_datasets_result['total_datasets'] if total_datasets_result else 0
         
         # Get quick predictions count
-        cursor.execute("SELECT COUNT(*) as quick_count FROM predictions WHERE prediction_type = 'quick'")
-        quick_count_result = cursor.fetchone()
+        quick_count_result = execute_query(
+            "SELECT COUNT(*) as quick_count FROM predictions WHERE prediction_type = 'quick'",
+            fetch_one=True
+        )
         quick_count = quick_count_result['quick_count'] if quick_count_result else 0
         
         # Get standard predictions count
-        cursor.execute("SELECT COUNT(*) as standard_count FROM predictions WHERE prediction_type = 'standard'")
-        standard_count_result = cursor.fetchone()
+        standard_count_result = execute_query(
+            "SELECT COUNT(*) as standard_count FROM predictions WHERE prediction_type = 'standard'",
+            fetch_one=True
+        )
         standard_count = standard_count_result['standard_count'] if standard_count_result else 0
-        
-        cursor.close()
-        connection.close()
         
         print(f"📊 Admin Stats - Users: {total_users}, Predictions: {total_predictions}, Datasets: {total_datasets}")
         
@@ -1963,23 +1913,13 @@ def get_admin_dashboard_stats():
         traceback.print_exc()
         return jsonify({'success': False, 'stats': {}})
 
-# Add these routes after your existing admin routes in app.py
-
 @app.route('/api/admin/all-predictions', methods=['GET'])
 @admin_required
 def get_all_predictions():
     """Get all predictions from all users for admin"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            print("❌ Database connection failed in get_all_predictions")
-            return jsonify({'success': False, 'predictions': [], 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        # Get all predictions with user information - FIXED QUERY
-        cursor.execute('''
-            SELECT 
+        predictions = execute_query(
+            '''SELECT 
                 p.id,
                 p.user_id,
                 p.dataset_name,
@@ -1995,24 +1935,11 @@ def get_all_predictions():
                 u.photo_url as user_photo
             FROM predictions p
             LEFT JOIN users u ON p.user_id = u.id
-            ORDER BY p.prediction_date DESC
-        ''')
+            ORDER BY p.prediction_date DESC''',
+            fetch_all=True
+        )
         
-        predictions = cursor.fetchall()
         print(f"✅ Found {len(predictions)} predictions across all users")
-        
-        # Format dates and values
-        for pred in predictions:
-            if pred['prediction_date']:
-                pred['prediction_date'] = pred['prediction_date'].isoformat() if hasattr(pred['prediction_date'], 'isoformat') else str(pred['prediction_date'])
-            # Ensure numeric values are properly formatted
-            if pred['predicted_value'] is not None:
-                pred['predicted_value'] = float(pred['predicted_value'])
-            if pred['accuracy'] is not None:
-                pred['accuracy'] = float(pred['accuracy'])
-        
-        cursor.close()
-        connection.close()
         
         return jsonify({'success': True, 'predictions': predictions, 'count': len(predictions)})
         
@@ -2026,14 +1953,8 @@ def get_all_predictions():
 def get_user_predictions(user_id):
     """Get predictions for a specific user"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'success': False, 'predictions': [], 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        cursor.execute('''
-            SELECT 
+        predictions = execute_query(
+            '''SELECT 
                 p.id,
                 p.user_id,
                 p.dataset_name,
@@ -2048,24 +1969,13 @@ def get_user_predictions(user_id):
                 u.email as user_email
             FROM predictions p
             LEFT JOIN users u ON p.user_id = u.id
-            WHERE p.user_id = %s
-            ORDER BY p.prediction_date DESC
-        ''', (user_id,))
+            WHERE p.user_id = ?
+            ORDER BY p.prediction_date DESC''',
+            (user_id,),
+            fetch_all=True
+        )
         
-        predictions = cursor.fetchall()
         print(f"✅ Found {len(predictions)} predictions for user {user_id}")
-        
-        # Format dates and values
-        for pred in predictions:
-            if pred['prediction_date']:
-                pred['prediction_date'] = pred['prediction_date'].isoformat() if hasattr(pred['prediction_date'], 'isoformat') else str(pred['prediction_date'])
-            if pred['predicted_value'] is not None:
-                pred['predicted_value'] = float(pred['predicted_value'])
-            if pred['accuracy'] is not None:
-                pred['accuracy'] = float(pred['accuracy'])
-        
-        cursor.close()
-        connection.close()
         
         return jsonify({'success': True, 'predictions': predictions})
         
@@ -2079,16 +1989,8 @@ def get_user_predictions(user_id):
 def get_all_datasets():
     """Get all datasets from all users for admin"""
     try:
-        connection = get_db_connection()
-        if not connection:
-            print("❌ Database connection failed in get_all_datasets")
-            return jsonify({'success': False, 'datasets': [], 'message': 'Database connection failed'})
-        
-        cursor = connection.cursor(dictionary=True)
-        
-        # Get all datasets with user information - FIXED QUERY
-        cursor.execute('''
-            SELECT 
+        datasets = execute_query(
+            '''SELECT 
                 d.id,
                 d.user_id,
                 d.name,
@@ -2105,19 +2007,11 @@ def get_all_datasets():
                 (SELECT COUNT(*) FROM dataset_columns dc WHERE dc.user_id = d.user_id AND dc.dataset_name = d.name) as actual_columns
             FROM datasets d
             LEFT JOIN users u ON d.user_id = u.id
-            ORDER BY d.uploaded_date DESC
-        ''')
+            ORDER BY d.uploaded_date DESC''',
+            fetch_all=True
+        )
         
-        datasets = cursor.fetchall()
         print(f"✅ Found {len(datasets)} datasets across all users")
-        
-        # Format dates
-        for ds in datasets:
-            if ds['uploaded_date']:
-                ds['uploaded_date'] = ds['uploaded_date'].isoformat() if hasattr(ds['uploaded_date'], 'isoformat') else str(ds['uploaded_date'])
-        
-        cursor.close()
-        connection.close()
         
         return jsonify({'success': True, 'datasets': datasets, 'count': len(datasets)})
         
@@ -2125,9 +2019,6 @@ def get_all_datasets():
         print(f"❌ Error getting all datasets: {e}")
         traceback.print_exc()
         return jsonify({'success': False, 'datasets': [], 'message': str(e)})
-
-
-
 
 if __name__ == '__main__':
     # Create necessary directories
@@ -2137,5 +2028,6 @@ if __name__ == '__main__':
     
     print("🚀 Starting Forest Data Analysis & Prediction System...")
     print(f"📁 Forest data file: {'✅ Found' if os.path.exists('forest_data.csv') else '❌ Not found'}")
+    print(f"📁 SQLite database: {DB_PATH}")
     print("🌐 Server running at: http://localhost:5000")
     app.run(debug=True, port=5000)
