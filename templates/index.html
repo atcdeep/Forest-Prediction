@@ -811,6 +811,55 @@
         ::-webkit-scrollbar-thumb:hover {
             background: linear-gradient(to bottom, #3a56d4, #6300a8);
         }
+
+        /* ===== PREDICTION MODE SELECTOR ===== */
+        .pred-mode-grid {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 15px 0 20px;
+        }
+        .pred-mode-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border: 3px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 25px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .pred-mode-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(67,97,238,0.2);
+        }
+        .pred-mode-card.selected {
+            border-color: var(--primary);
+            background: linear-gradient(135deg, rgba(67,97,238,0.08), rgba(114,9,183,0.04));
+            box-shadow: 0 8px 20px rgba(67,97,238,0.25);
+        }
+        .pred-mode-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .pred-mode-card h5 {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 6px;
+        }
+        .pred-mode-card p {
+            font-size: 0.85em;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .pred-mode-card.selected h5 {
+            color: var(--primary);
+        }
     </style>
 </head>
 
@@ -886,7 +935,7 @@
                         <h4>Step 1: Select Dataset</h4>
                         <div class="form-group">
                             <label for="prediction-dataset">Select Dataset</label>
-                            <select id="prediction-dataset" onchange="loadDatasetColumns(this.value)">
+                            <select id="prediction-dataset" onchange="onDatasetSelected(this.value)">
                                 <option value="">-- Select Dataset --</option>
                                 <!-- Datasets will be loaded here -->
                             </select>
@@ -894,9 +943,32 @@
                         <button onclick="nextStep(2)" class="btn">Next</button>
                     </div>
 
-                    <!-- Step 2: Select metric -->
+                    <!-- Step 2: Choose Row Wise or Column Wise -->
                     <div class="prediction-step" id="step-2">
-                        <h4>Step 2: Select Metric</h4>
+                        <h4>Step 2: Prediction Mode Chuno</h4>
+                        <p style="color:#64748b; margin-bottom: 15px;">Kya aap row wise predict karna chahte hain ya column wise?</p>
+                        <div class="pred-mode-grid">
+                            <div class="pred-mode-card" onclick="selectPredictionMode('row')" id="pred-mode-row">
+                                <span class="pred-mode-icon">📋</span>
+                                <h5>Row Wise</h5>
+                                <p>Ek specific row (e.g., Country) select karo aur uski value predict karo</p>
+                            </div>
+                            <div class="pred-mode-card" onclick="selectPredictionMode('column')" id="pred-mode-column">
+                                <span class="pred-mode-icon">📊</span>
+                                <h5>Column Wise</h5>
+                                <p>Ek column/metric select karo aur uski future value predict karo</p>
+                            </div>
+                        </div>
+                        <p id="pred-mode-hint" style="color:#ef476f; font-size:0.9em; margin-top:8px; display:none;">Please select a prediction mode.</p>
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button onclick="prevStep(1)" class="btn btn-secondary">Previous</button>
+                            <button onclick="goToStep3()" class="btn">Next</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3A: Column Wise - Select column -->
+                    <div class="prediction-step" id="step-3-col">
+                        <h4>Step 3: Column Select Karo</h4>
                         <div class="form-group">
                             <label for="prediction-column">Select Column for Prediction</label>
                             <select id="prediction-column">
@@ -908,13 +980,35 @@
                             <input type="number" id="prediction-year" min="2000" max="2100" value="2025">
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button onclick="prevStep(1)" class="btn btn-secondary">Previous</button>
+                            <button onclick="prevStep(2)" class="btn btn-secondary">Previous</button>
+                            <button onclick="makePrediction()" class="btn">Make Prediction</button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3B: Row Wise - Select row + target year -->
+                    <div class="prediction-step" id="step-3-row">
+                        <h4>Step 3: Row Select Karo</h4>
+                        <div class="form-group">
+                            <label id="row-identifier-label" for="prediction-row">Select Country Name</label>
+                            <select id="prediction-row">
+                                <!-- Row values will be loaded here -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="prediction-year-row">Target Year</label>
+                            <input type="number" id="prediction-year-row" min="2000" max="2100" value="2025">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="prevStep(2)" class="btn btn-secondary">Previous</button>
                             <button onclick="makePrediction()" class="btn">Make Prediction</button>
                         </div>
                     </div>
                 </div>
 
                 <div id="prediction-result" style="margin-top: 20px;"></div>
+                <div id="prediction-new-btn-row" style="display:none; margin-top:12px;">
+                    <button onclick="resetPredictionSteps(); document.getElementById('prediction-new-btn-row').style.display='none';" class="btn" style="background:linear-gradient(135deg,#06d6a0,#118ab2);">🔄 New Prediction</button>
+                </div>
             </div>
         </div>
 
@@ -1386,10 +1480,10 @@
                                         <strong>Department:</strong> MS Swaminathan School of Agriculture
                                     </p>
                                     <p style="color: #64748b; margin-bottom: 10px;">
-                                        <strong>Expertise:</strong> Forestry, Environment science, Modelling
+                                        <strong>Expertise:</strong> Forestry, Envirnoment science, Modelling
                                     </p>
-                                    <a href="mailto:abha.manohar@cutm.ac.in"
-                                        style="display: inline-flex; align-items: center; gap: 8px; background: #4361ee; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s; cursor: pointer;">
+                                    <a href="mailto:john.smith@university.edu"
+                                        style="display: inline-flex; align-items: center; gap: 8px; background: #4361ee; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s;">
                                         <span>📧</span>
                                         <span>abha.manohar@cutm.ac.in</span>
                                     </a>
@@ -1424,7 +1518,7 @@
                                         <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
                                             <strong>Role:</strong> Backend Development, ML Models
                                         </p>
-                                        <a href="mailto:230101120203@centurionuniv.edu.in"
+                                        <a href="230101120203@centurionuniv.edu.in"
                                             style="display: inline-flex; align-items: center; gap: 5px; color: #4361ee; text-decoration: none; font-weight: 600; font-size: 0.9em;">
                                             <span>📧</span>
                                             <span>230101120203@centurionuniv.edu.in</span>
@@ -1450,7 +1544,7 @@
                                         <p style="color: #64748b; margin-bottom: 8px; font-size: 0.9em;">
                                             <strong>Role:</strong> Dashboard Design, Visualization
                                         </p>
-                                        <a href="mailto:230101120184@centurionuniv.edu.in"
+                                        <a href="230101120184@centurionuniv.edu.in"
                                             style="display: inline-flex; align-items: center; gap: 5px; color: #06d6a0; text-decoration: none; font-weight: 600; font-size: 0.9em;">
                                             <span>📧</span>
                                             <span>230101120184@centurionuniv.edu.in</span>
@@ -2493,35 +2587,57 @@
             // Make standard prediction
             async function makePrediction() {
                 const dataset = document.getElementById('prediction-dataset').value;
-                const column = document.getElementById('prediction-column').value;
-                const year = document.getElementById('prediction-year').value;
 
-                console.log(`Standard Prediction - Dataset: ${dataset}, Column: ${column}, Year: ${year}`);
+                if (predictionMode === 'row') {
+                    const row = document.getElementById('prediction-row').value;
+                    const year = document.getElementById('prediction-year-row').value;
 
-                if (!dataset || !column || !year) {
-                    showNotification('Please fill all fields', 'error');
-                    return;
+                    if (!dataset || !row || !year) {
+                        showNotification('Please fill all fields', 'error');
+                        return;
+                    }
+
+                    console.log(`Row-Wise Prediction - Dataset: ${dataset}, ${predictionRowIdentifierCol}: ${row}, Year: ${year}`);
+                    // metric=null => backend predicts all numeric columns for this row
+                    await makePredictionRequest(dataset, null, year, 'prediction-result', 'row_wise', predictionRowIdentifierCol, row);
+
+                } else {
+                    const column = document.getElementById('prediction-column').value;
+                    const year = document.getElementById('prediction-year').value;
+
+                    if (!dataset || !column || !year) {
+                        showNotification('Please fill all fields', 'error');
+                        return;
+                    }
+
+                    console.log(`Column-Wise Prediction - Dataset: ${dataset}, Column: ${column}, Year: ${year}`);
+                    await makePredictionRequest(dataset, column, year, 'prediction-result', 'standard');
                 }
-
-                await makePredictionRequest(dataset, column, year, 'prediction-result', 'standard');
             }
 
             // Make prediction request to API
-            async function makePredictionRequest(dataset, metric, year, resultElementId, predictionType = 'standard') {
+            async function makePredictionRequest(dataset, metric, year, resultElementId, predictionType = 'standard', filterColumn = null, filterValue = null) {
                 try {
                     console.log(`Making ${predictionType} prediction request...`);
+
+                    const requestBody = {
+                        dataset: dataset,
+                        metric: metric,
+                        target_year: parseInt(year),
+                        prediction_type: predictionType
+                    };
+
+                    if (filterColumn && filterValue) {
+                        requestBody.filter_column = filterColumn;
+                        requestBody.filter_value = filterValue;
+                    }
 
                     const response = await fetch('/api/predict', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            dataset: dataset,
-                            metric: metric,
-                            target_year: parseInt(year),
-                            prediction_type: predictionType
-                        })
+                        body: JSON.stringify(requestBody)
                     });
 
                     const result = await response.json();
@@ -2529,34 +2645,53 @@
 
                     if (result.success) {
                         const resultDiv = document.getElementById(resultElementId);
+                        let html = `<div class="prediction-result">`;
 
-                        let html = `
-                    <div class="prediction-result">
-                        <h4>✅ Prediction Successful</h4>
-                        <p><strong>Type:</strong> ${predictionType === 'quick' ? 'Quick Prediction' : 'Standard Prediction'}</p>
-                `;
-
-                        if (dataset) {
+                        if (result.row_wise && result.predictions) {
+                            // Row-Wise: show table of all predicted metrics
+                            html += `<h4>✅ Row-Wise Prediction Results</h4>`;
                             html += `<p><strong>Dataset:</strong> ${dataset}</p>`;
+                            html += `<p><strong>${result.filter_column}:</strong> ${result.filter_value}</p>`;
+                            html += `<p><strong>Target Year:</strong> ${year}</p>`;
+                            html += `<table style="width:100%;border-collapse:collapse;margin-top:12px;">
+                                <thead>
+                                    <tr style="background:#4361ee;color:white;">
+                                        <th style="padding:10px;text-align:left;">Metric</th>
+                                        <th style="padding:10px;text-align:right;">Predicted Value</th>
+                                        <th style="padding:10px;text-align:right;">Accuracy</th>
+                                    </tr>
+                                </thead>
+                                <tbody>`;
+                            result.predictions.forEach((p, i) => {
+                                html += `<tr style="background:${i % 2 === 0 ? '#f8f9fa' : 'white'}">
+                                    <td style="padding:8px 10px;">${p.metric}</td>
+                                    <td style="padding:8px 10px;text-align:right;color:#4361ee;font-weight:600;">${p.prediction.toFixed(4)}</td>
+                                    <td style="padding:8px 10px;text-align:right;color:${p.accuracy > 0.7 ? '#06d6a0' : '#ef476f'};font-weight:600;">${(p.accuracy * 100).toFixed(2)}%</td>
+                                </tr>`;
+                            });
+                            html += `</tbody></table>`;
+                        } else {
+                            // Column-Wise / Quick: show single metric prediction
+                            html += `<h4>✅ Prediction Successful</h4>`;
+                            html += `<p><strong>Type:</strong> ${predictionType === 'quick' ? 'Quick Prediction' : 'Column-Wise Prediction'}</p>`;
+                            if (dataset) html += `<p><strong>Dataset:</strong> ${dataset}</p>`;
+                            html += `<p><strong>Metric:</strong> ${metric}</p>`;
+                            html += `<p><strong>Year:</strong> ${year}</p>`;
+                            html += `<p><strong>Predicted Value:</strong> <span style="color:#4361ee;font-size:1.2em;">${result.prediction?.toFixed(4) || 'N/A'}</span></p>`;
+                            if (result.accuracy !== undefined) {
+                                html += `<p><strong>Model Accuracy:</strong> <span style="color:${result.accuracy > 0.7 ? '#06d6a0' : '#ef476f'};font-weight:bold;">${(result.accuracy * 100).toFixed(2)}%</span></p>`;
+                            }
+                            html += `<p><strong>Data Points Used:</strong> ${result.data_points || 0}</p>`;
                         }
 
-                        html += `
-                        <p><strong>Metric:</strong> ${metric}</p>
-                        <p><strong>Year:</strong> ${year}</p>
-                        <p><strong>Predicted Value:</strong> <span style="color: #4361ee; font-size: 1.2em;">${result.prediction?.toFixed(4) || 'N/A'}</span></p>
-                `;
-
-                        if (result.accuracy !== undefined) {
-                            html += `<p><strong>Model Accuracy:</strong> <span style="color: ${result.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">${(result.accuracy * 100).toFixed(2)}%</span></p>`;
-                        }
-
-                        html += `
-                        <p><strong>Data Points Used:</strong> ${result.data_points || 0}</p>
-                    </div>
-                `;
+                        html += `</div>`;
                         resultDiv.innerHTML = html;
 
-                        showNotification(`${predictionType === 'quick' ? 'Quick' : 'Standard'} prediction saved to history!`, 'success');
+                        // Show "New Prediction" button
+                        const newBtnRow = document.getElementById('prediction-new-btn-row');
+                        if (newBtnRow) newBtnRow.style.display = 'block';
+
+                        showNotification('Prediction completed and saved to history!', 'success');
 
                         // Refresh predictions in history tab
                         setTimeout(() => {
@@ -2587,71 +2722,67 @@
                     quickPredictionsTable.innerHTML = '';
                     standardPredictionsTable.innerHTML = '';
 
-                    // Separate predictions
+                    // Separate predictions by type
                     const quickPreds = predictions.filter(p => p.prediction_type === 'quick');
-                    const standardPreds = predictions.filter(p => p.prediction_type === 'standard');
+                    // Standard table shows both 'standard' and 'row_wise' predictions
+                    const standardPreds = predictions.filter(p =>
+                        p.prediction_type === 'standard' || p.prediction_type === 'row_wise'
+                    );
 
-                    // Load Quick Predictions (Table 1)
+                    // --- Quick Predictions Table ---
                     if (quickPreds.length === 0) {
                         quickPredictionsTable.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; padding: 30px; color: #666;">
                             No quick predictions yet. Try making one from the Dashboard tab!
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
                     } else {
                         quickPreds.forEach(pred => {
                             const row = quickPredictionsTable.insertRow();
                             const date = new Date(pred.prediction_date);
-
                             row.innerHTML = `
                         <td>${date.toLocaleString()}</td>
+                        <td>${pred.dataset_name || pred.dataset || 'forest_data'}</td>
                         <td>${pred.predicted_metric}</td>
                         <td>${pred.year}</td>
                         <td>${parseFloat(pred.predicted_value).toFixed(4)}</td>
                         <td style="color: ${pred.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">
                             ${(pred.accuracy * 100).toFixed(2)}%
                         </td>
-                        <td>${pred.dataset || 'forest_data'}</td>
                         <td>
-                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">
-                                Delete
-                            </button>
-                        </td>
-                    `;
+                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">Delete</button>
+                        </td>`;
                         });
                     }
 
-                    // Load Standard Predictions (Table 2)
+                    // --- Standard / Row-Wise Predictions Table ---
                     if (standardPreds.length === 0) {
                         standardPredictionsTable.innerHTML = `
                     <tr>
                         <td colspan="7" style="text-align: center; padding: 30px; color: #666;">
-                            No standard predictions yet. Try making one from the Make Predictions tab!
+                            No predictions yet. Make one from the Make Predictions tab!
                         </td>
-                    </tr>
-                `;
+                    </tr>`;
                     } else {
                         standardPreds.forEach(pred => {
                             const row = standardPredictionsTable.insertRow();
                             const date = new Date(pred.prediction_date);
-
+                            const typeLabel = pred.prediction_type === 'row_wise'
+                                ? '<span style="background:#e3f2fd;color:#1976d2;padding:2px 7px;border-radius:4px;font-size:0.8em;">Row-Wise</span>'
+                                : '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 7px;border-radius:4px;font-size:0.8em;">Column-Wise</span>';
                             row.innerHTML = `
                         <td>${date.toLocaleString()}</td>
-                        <td>${pred.dataset || 'forest_data'}</td>
-                        <td>${pred.predicted_metric}</td>
+                        <td>${pred.dataset_name || pred.dataset || 'forest_data'}</td>
+                        <td>${pred.predicted_metric} ${typeLabel}</td>
                         <td>${pred.year}</td>
                         <td>${parseFloat(pred.predicted_value).toFixed(4)}</td>
                         <td style="color: ${pred.accuracy > 0.7 ? '#06d6a0' : '#ef476f'}; font-weight: bold;">
                             ${(pred.accuracy * 100).toFixed(2)}%
                         </td>
                         <td>
-                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">
-                                Delete
-                            </button>
-                        </td>
-                    `;
+                            <button onclick="deletePrediction(${pred.id})" class="delete-btn">Delete</button>
+                        </td>`;
                         });
                     }
 
@@ -2673,102 +2804,131 @@
                 showNotification('Statistics refreshed', 'success');
             }
 
+            // =============================================
+            // PREDICTION WIZARD - ROW / COLUMN WISE
+            // =============================================
+            let predictionMode = ''; // 'row' or 'column'
+            let predictionRowIdentifierCol = ''; // e.g., 'Country'
+            let predictionAllColumns = []; // all dataset columns
+
+            function onDatasetSelected(datasetName) {
+                if (!datasetName) return;
+                // Pre-load columns and row identifiers in background
+                loadDatasetColumnsForPrediction(datasetName);
+            }
+
+            async function loadDatasetColumnsForPrediction(datasetName) {
+                try {
+                    const response = await fetch(`/api/dataset/${encodeURIComponent(datasetName)}/columns`);
+                    const result = await response.json();
+                    if (result.success && result.columns) {
+                        predictionAllColumns = result.columns;
+                        // Populate column-wise select
+                        const colSelect = document.getElementById('prediction-column');
+                        colSelect.innerHTML = '<option value="">-- Select Column --</option>';
+                        result.columns.forEach(col => {
+                            const opt = document.createElement('option');
+                            opt.value = col;
+                            opt.textContent = col;
+                            colSelect.appendChild(opt);
+                        });
+                        // Also populate row-column select (excluding identifier col)
+                        // Will be refreshed when row identifier is loaded
+                    }
+                } catch (e) {
+                    console.error('Error loading columns:', e);
+                }
+            }
+
+            async function loadRowIdentifiers(datasetName) {
+                try {
+                    const response = await fetch(`/api/dataset/${encodeURIComponent(datasetName)}/row-identifiers`);
+                    const result = await response.json();
+                    if (result.success) {
+                        predictionRowIdentifierCol = result.identifier_column;
+                        document.getElementById('row-identifier-label').textContent = `Select ${result.identifier_column}`;
+                        const rowSelect = document.getElementById('prediction-row');
+                        rowSelect.innerHTML = `<option value="">-- Select ${result.identifier_column} --</option>`;
+                        result.values.forEach(val => {
+                            const opt = document.createElement('option');
+                            opt.value = val;
+                            opt.textContent = val;
+                            rowSelect.appendChild(opt);
+                        });
+                        // Update label with actual identifier column name
+                        document.getElementById('row-identifier-label').textContent = `Select ${result.identifier_column}`;
+                    } else {
+                        showNotification(result.message || 'Could not load row identifiers', 'warning');
+                    }
+                } catch (e) {
+                    console.error('Error loading row identifiers:', e);
+                    showNotification('Error loading row values', 'error');
+                }
+            }
+
+            function selectPredictionMode(mode) {
+                predictionMode = mode;
+                document.getElementById('pred-mode-row').classList.toggle('selected', mode === 'row');
+                document.getElementById('pred-mode-column').classList.toggle('selected', mode === 'column');
+                document.getElementById('pred-mode-hint').style.display = 'none';
+            }
+
+            function goToStep3() {
+                if (!predictionMode) {
+                    document.getElementById('pred-mode-hint').style.display = 'block';
+                    return;
+                }
+                const dataset = document.getElementById('prediction-dataset').value;
+                // Show correct step 3 panel
+                document.querySelectorAll('.prediction-step').forEach(s => s.classList.remove('active'));
+                if (predictionMode === 'row') {
+                    document.getElementById('step-3-row').classList.add('active');
+                    loadRowIdentifiers(dataset);
+                } else {
+                    document.getElementById('step-3-col').classList.add('active');
+                    loadDatasetColumnsForPrediction(dataset);
+                }
+                currentStep = 3;
+            }
+            // =============================================
+            // END PREDICTION WIZARD - ROW / COLUMN WISE
+            // =============================================
+
             // Prediction step navigation
             function nextStep(step) {
-                document.querySelectorAll('.prediction-step').forEach(step => {
-                    step.classList.remove('active');
-                });
+                if (step === 2) {
+                    const dataset = document.getElementById('prediction-dataset').value;
+                    if (!dataset) {
+                        showNotification('Please select a dataset first', 'error');
+                        return;
+                    }
+                    // Pre-load columns when moving to step 2
+                    loadDatasetColumnsForPrediction(dataset);
+                }
+                document.querySelectorAll('.prediction-step').forEach(s => s.classList.remove('active'));
                 document.getElementById(`step-${step}`).classList.add('active');
                 currentStep = step;
             }
 
             function prevStep(step) {
-                document.querySelectorAll('.prediction-step').forEach(step => {
-                    step.classList.remove('active');
-                });
+                document.querySelectorAll('.prediction-step').forEach(s => s.classList.remove('active'));
                 document.getElementById(`step-${step}`).classList.add('active');
                 currentStep = step;
+                // Clear result when going back
+                document.getElementById('prediction-result').innerHTML = '';
             }
 
             function resetPredictionSteps() {
-                document.querySelectorAll('.prediction-step').forEach(step => {
-                    step.classList.remove('active');
-                });
+                document.querySelectorAll('.prediction-step').forEach(s => s.classList.remove('active'));
                 document.getElementById('step-1').classList.add('active');
+                predictionMode = '';
+                document.getElementById('pred-mode-row').classList.remove('selected');
+                document.getElementById('pred-mode-column').classList.remove('selected');
                 currentStep = 1;
-            }
-
-            // Delete a prediction
-            async function deletePrediction(predictionId) {
-                if (!confirm('Are you sure you want to delete this prediction?')) {
-                    return;
-                }
-
-                try {
-                    console.log(`Deleting prediction: ${predictionId}`);
-
-                    const response = await fetch(`/api/prediction/${predictionId}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        showNotification('Prediction deleted successfully', 'success');
-
-                        // Reload predictions
-                        setTimeout(() => {
-                            loadPredictions();
-                        }, 500);
-
-                    } else {
-                        showNotification(`Failed to delete prediction: ${result.message}`, 'error');
-                    }
-
-                } catch (error) {
-                    console.error('Error deleting prediction:', error);
-                    showNotification('Error deleting prediction', 'error');
-                }
-            }
-
-            // Clear all predictions
-            async function clearPredictions() {
-                if (!confirm('Are you sure you want to clear all prediction history? This action cannot be undone.')) {
-                    return;
-                }
-
-                try {
-                    console.log("Clearing all predictions...");
-                    showNotification('Clearing predictions...', 'info');
-
-                    const response = await fetch('/api/clear-predictions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        showNotification('All predictions cleared successfully', 'success');
-
-                        // Reload predictions to show empty state
-                        setTimeout(() => {
-                            loadPredictions();
-                        }, 500);
-
-                    } else {
-                        showNotification(`Failed to clear predictions: ${result.message}`, 'error');
-                    }
-
-                } catch (error) {
-                    console.error('Error clearing predictions:', error);
-                    showNotification('Error clearing predictions', 'error');
-                }
+                // Clear result on reset
+                document.getElementById('prediction-result').innerHTML = '';
+                const newBtnRow = document.getElementById('prediction-new-btn-row');
+                if (newBtnRow) newBtnRow.style.display = 'none';
             }
 
             // Initialize charts
@@ -3336,4 +3496,4 @@
         </script>
 </body>
 
-</html>
+                                </html>
