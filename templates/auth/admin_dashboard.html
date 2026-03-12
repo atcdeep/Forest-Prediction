@@ -1221,9 +1221,27 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" onclick="showSection('system')">
-                        <i class="fas fa-cog"></i>
-                        System Stats
+                    <a class="nav-link" onclick="showSection('approvals')">
+                        <i class="fas fa-clipboard-check"></i>
+                        Dataset Approvals
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('support')">
+                        <i class="fas fa-headset"></i>
+                        Support Queries
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('global-library')">
+                        <i class="fas fa-globe"></i>
+                        Global Library
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" onclick="showSection('adv-analytics')">
+                        <i class="fas fa-chart-pie"></i>
+                        Advanced Analytics
                     </a>
                 </li>
             </ul>
@@ -1359,12 +1377,185 @@
                 </div>
             </div>
 
-            <!-- System Stats Section -->
-            <div id="system-section" class="tab-content" style="display: none;">
+            <!-- Support Queries Section -->
+            <div id="support-section" class="tab-content" style="display: none;">
                 <div class="users-section">
-                    <h3>System Statistics</h3>
-                    <div class="stats-grid" id="systemStatsContainer">
-                        <!-- System stats will be loaded here -->
+                    <div class="section-header">
+                        <h3>Support Queries</h3>
+                        <div class="header-controls">
+                            <select id="support-status-filter" onchange="loadSupportQueries()"
+                                style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;color:#334155;">
+                                <option value="open">Open</option>
+                                <option value="resolved">Resolved</option>
+                                <option value="all">All</option>
+                            </select>
+                            <button class="refresh-btn" onclick="loadSupportQueries()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container" id="support-table">
+                        <p style="color:#64748b;text-align:center;padding:30px;">Loading support queries...</p>
+                    </div>
+                </div>
+                <!-- Resolve Modal -->
+                <div id="resolve-query-modal"
+                    style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:480px;width:90%;">
+                        <h3 style="color:#334155;margin-bottom:15px;">Resolve Support Query</h3>
+                        <input type="hidden" id="resolve-query-id">
+                        <textarea id="resolve-response" placeholder="Write your response/solution to the user..."
+                            style="width:100%;height:100px;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.95em;resize:vertical;"></textarea>
+                        <div style="display:flex;gap:10px;margin-top:15px;">
+                            <button onclick="confirmResolveQuery()"
+                                style="background:#06d6a0;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Send
+                                & Resolve</button>
+                            <button onclick="document.getElementById('resolve-query-modal').style.display='none';"
+                                style="padding:10px 20px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <!-- Screenshot Viewer Modal -->
+                <div id="screenshot-modal"
+                    style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;"
+                    onclick="this.style.display='none'">
+                    <img id="screenshot-img" src=""
+                        style="max-width:90%;max-height:90%;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,0.5);">
+                </div>
+            </div>
+            <!-- System Stats Section (hidden/removed) -->
+            <div id="system-section" class="tab-content" style="display: none;"></div>
+
+            <!-- Dataset Approvals Section -->
+            <div id="approvals-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>Dataset Approvals</h3>
+                        <div class="header-controls">
+                            <select id="approvals-status-filter" onchange="loadApprovals()"
+                                style="padding:8px 14px;border-radius:8px;border:1px solid #e2e8f0;color:#334155;">
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <button class="refresh-btn" onclick="loadApprovals()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-container" id="approvals-table">
+                        <p style="color:#64748b;text-align:center;padding:30px;">Loading approvals...</p>
+                    </div>
+                </div>
+                <!-- Reject Note Modal -->
+                <div id="reject-note-modal"
+                    style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+                    <div style="background:#fff;border-radius:16px;padding:30px;max-width:460px;width:90%;">
+                        <h3 style="color:#334155;margin-bottom:15px;">Reject Dataset</h3>
+                        <input type="hidden" id="reject-approval-id">
+                        <textarea id="reject-note" placeholder="Reason for rejection (optional)"
+                            style="width:100%;height:90px;padding:10px;border-radius:8px;border:1px solid #e2e8f0;font-size:0.95em;resize:vertical;"></textarea>
+                        <div style="display:flex;gap:10px;margin-top:15px;">
+                            <button onclick="confirmReject()"
+                                style="background:#ef476f;color:#fff;padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Confirm
+                                Reject</button>
+                            <button onclick="document.getElementById('reject-note-modal').style.display='none';"
+                                style="padding:10px 20px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Library Section -->
+            <div id="global-library-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>Global Dataset Library</h3>
+                        <div class="header-controls">
+                            <button class="refresh-btn" onclick="loadGlobalLibrary()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Upload form -->
+                    <div
+                        style="background:#f8faff;border:1px solid rgba(67,97,238,0.15);border-radius:14px;padding:22px;margin-bottom:22px;">
+                        <h4 style="color:#4361ee;margin-bottom:14px;"><i class="fas fa-cloud-upload-alt"></i> Add Global
+                            Dataset</h4>
+                        <form id="global-upload-form"
+                            style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+                            <div>
+                                <label style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">Dataset
+                                    Name</label>
+                                <input type="text" id="glib-name" placeholder="e.g. World Forest 2020"
+                                    style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">Tags
+                                    (comma-separated)</label>
+                                <input type="text" id="glib-tags" placeholder="forest, climate, global"
+                                    style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;">
+                            </div>
+                            <div style="grid-column:1/-1;">
+                                <label
+                                    style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">Description</label>
+                                <textarea id="glib-description" placeholder="Brief description of this dataset..."
+                                    style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;height:60px;resize:vertical;"></textarea>
+                            </div>
+                            <div>
+                                <label style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">CSV
+                                    File</label>
+                                <input type="file" id="glib-file" accept=".csv"
+                                    style="width:100%;padding:6px;border-radius:8px;border:1px solid #e2e8f0;">
+                            </div>
+                            <div style="display:flex;align-items:flex-end;">
+                                <button type="button" onclick="uploadGlobalDataset()"
+                                    style="background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-weight:600;white-space:nowrap;">
+                                    <i class="fas fa-upload"></i> Upload
+                                </button>
+                            </div>
+                        </form>
+                        <div id="glib-upload-result" style="margin-top:12px;"></div>
+                    </div>
+
+                    <div class="table-container" id="global-library-table">
+                        <p style="color:#64748b;text-align:center;padding:30px;">Loading library...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Analytics Section -->
+            <div id="adv-analytics-section" class="tab-content" style="display: none;">
+                <div class="users-section">
+                    <div class="section-header">
+                        <h3>Advanced Analytics</h3>
+                        <button class="refresh-btn" onclick="loadAdvancedAnalytics()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="stats-grid" id="adv-analytics-stats" style="margin-bottom:24px;"></div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;">
+                        <div
+                            style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+                            <h4 style="color:#4361ee;margin-bottom:14px;">Model Usage Distribution</h4>
+                            <canvas id="advModelChart" style="max-height:220px;"></canvas>
+                        </div>
+                        <div
+                            style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+                            <h4 style="color:#4361ee;margin-bottom:14px;">Top Predicted Metrics</h4>
+                            <canvas id="advMetricsChart" style="max-height:220px;"></canvas>
+                        </div>
+                        <div
+                            style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+                            <h4 style="color:#4361ee;margin-bottom:14px;">Accuracy Distribution</h4>
+                            <canvas id="advAccChart" style="max-height:220px;"></canvas>
+                        </div>
+                        <div
+                            style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,0.07);">
+                            <h4 style="color:#4361ee;margin-bottom:14px;">Predictions Over Time</h4>
+                            <canvas id="advTimeChart" style="max-height:220px;"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1389,6 +1580,47 @@
         <!-- Content will be dynamically added -->
     </div>
 
+    <!-- ── Approval Dataset Preview Modal ── -->
+    <div id="approval-preview-modal"
+        style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;">
+        <div
+            style="background:#fff;border-radius:20px;width:95%;max-width:960px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
+            <div
+                style="padding:18px 24px;background:linear-gradient(135deg,#4361ee,#7c3aed);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <h3 style="color:#fff;margin:0;font-size:1.1em;">&#128200; Dataset Preview</h3>
+                    <p id="preview-subtitle" style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:0.82em;"></p>
+                </div>
+                <button onclick="document.getElementById('approval-preview-modal').style.display='none'"
+                    style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.2em;">&#10005;</button>
+            </div>
+            <div id="preview-stats-bar"
+                style="padding:12px 24px;background:#f8faff;border-bottom:1px solid #e2e8f0;display:flex;gap:20px;flex-wrap:wrap;flex-shrink:0;">
+            </div>
+            <div style="overflow:auto;flex:1;padding:16px 20px;">
+                <div id="preview-table-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Approval Dataset Analysis Modal ── -->
+    <div id="approval-analysis-modal"
+        style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);z-index:10000;align-items:center;justify-content:center;">
+        <div
+            style="background:#fff;border-radius:20px;width:95%;max-width:720px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);overflow:hidden;">
+            <div
+                style="padding:18px 24px;background:linear-gradient(135deg,#1e1b4b,#4338ca);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <h3 style="color:#fff;margin:0;font-size:1.1em;">&#128269; Originality Analysis</h3>
+                    <p id="analysis-subtitle" style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:0.82em;"></p>
+                </div>
+                <button onclick="document.getElementById('approval-analysis-modal').style.display='none'"
+                    style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:1.2em;">&#10005;</button>
+            </div>
+            <div id="analysis-body" style="overflow-y:auto;flex:1;padding:24px;"></div>
+        </div>
+    </div>
+
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
     </div>
@@ -1397,30 +1629,6 @@
         let activityChart, activityTypeChart;
         let allPredictions = [];
         let allDatasets = [];
-
-        // Helper function to format date only (no time)
-        function formatDateOnly(dateString) {
-            if (!dateString) return 'N/A';
-
-            try {
-                const date = new Date(dateString);
-
-                // Check if date is valid
-                if (isNaN(date.getTime())) {
-                    return 'Invalid Date';
-                }
-
-                // Format: YYYY-MM-DD only (no time)
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-
-                return `${year}-${month}-${day}`;
-            } catch (e) {
-                console.error('Date formatting error:', e);
-                return 'Invalid Date';
-            }
-        }
 
         // Check admin session
         async function checkAdminSession() {
@@ -1474,8 +1682,17 @@
                 case 'activity':
                     loadAllActivity();
                     break;
-                case 'system':
-                    loadSystemStats();
+                case 'approvals':
+                    loadApprovals();
+                    break;
+                case 'support':
+                    loadSupportQueries();
+                    break;
+                case 'global-library':
+                    loadGlobalLibrary();
+                    break;
+                case 'adv-analytics':
+                    loadAdvancedAnalytics();
                     break;
             }
         }
@@ -1696,6 +1913,7 @@
             `;
 
             predictions.forEach(pred => {
+                const date = pred.prediction_date ? new Date(pred.prediction_date) : new Date();
                 const accuracyPercent = pred.accuracy ? (pred.accuracy * 100).toFixed(2) : 'N/A';
                 const accuracyColor = pred.accuracy > 0.7 ? '#48bb78' : (pred.accuracy > 0.5 ? '#fbbf24' : '#f56565');
                 const userName = pred.user_name || 'Unknown User';
@@ -1729,7 +1947,7 @@
                                 ${pred.prediction_type || 'standard'}
                             </span>
                         </td>
-                        <td>${formatDateOnly(pred.prediction_date)}</td>
+                        <td>${date.toLocaleString()}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserDetails(${pred.user_id})" title="View User">
                                 <i class="fas fa-user"></i>
@@ -1796,7 +2014,7 @@
                             <th>Columns</th>
                             <th>Type</th>
                             <th>Primary</th>
-                            <th>Uploaded Date</th>
+                            <th>Uploaded</th>
                             <th>Description</th>
                             <th>Actions</th>
                         </tr>
@@ -1805,6 +2023,7 @@
             `;
 
             datasets.forEach(ds => {
+                const date = ds.uploaded_date ? new Date(ds.uploaded_date) : new Date();
                 const userName = ds.user_name || 'Unknown User';
                 const userEmail = ds.user_email || 'No email';
                 const userInitial = userName.charAt(0).toUpperCase();
@@ -1830,7 +2049,7 @@
                             </span>
                         </td>
                         <td>${ds.is_primary ? '✅' : '❌'}</td>
-                        <td>${formatDateOnly(ds.uploaded_date)}</td>
+                        <td>${date.toLocaleDateString()}</td>
                         <td>${ds.description || 'N/A'}</td>
                         <td>
                             <button class="action-btn view" onclick="viewDataset('${ds.name}', ${ds.user_id})" title="View Dataset">
@@ -2061,7 +2280,7 @@
                             <th>Role</th>
                             <th>Status</th>
                             <th>Provider</th>
-                            <th>Last Login Date</th>
+                            <th>Last Login</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -2090,7 +2309,7 @@
                             </span>
                         </td>
                         <td>${user.provider || 'local'}</td>
-                        <td>${formatDateOnly(user.last_login)}</td>
+                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
                                 <i class="fas fa-eye"></i>
@@ -2140,8 +2359,8 @@
                             <th>Role</th>
                             <th>Status</th>
                             <th>Provider</th>
-                            <th>Last Login Date</th>
-                            <th>Created Date</th>
+                            <th>Last Login</th>
+                            <th>Created</th>
                             <th>Activities</th>
                             <th>Actions</th>
                         </tr>
@@ -2171,8 +2390,8 @@
                             </span>
                         </td>
                         <td>${user.provider || 'local'}</td>
-                        <td>${formatDateOnly(user.last_login)}</td>
-                        <td>${formatDateOnly(user.created_at)}</td>
+                        <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                        <td>${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}</td>
                         <td>${user.activity_count || 0}</td>
                         <td>
                             <button class="action-btn view" onclick="viewUserActivity(${user.id})" title="View Activity">
@@ -2188,6 +2407,9 @@
                                 <button class="action-btn delete" onclick="deleteUser(${user.id})" title="Delete User">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                <select onchange="changeUserRole(${user.id}, this.value)" title="Change Role" style="padding:3px 7px;border-radius:6px;border:1px solid #e2e8f0;font-size:0.82em;cursor:pointer;">
+                                    ${['user', 'researcher', 'moderator'].map(r => `<option value="${r}" ${user.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+                                </select>   
                             ` : ''}
                         </td>
                     </tr>
@@ -2251,10 +2473,11 @@
             } else {
                 modalContent.innerHTML = activities.map(activity => `
                     <div class="activity-item">
-                        <div class="activity-time">${formatDateOnly(activity.created_at)}</div>
+                        <div class="activity-time">${new Date(activity.created_at).toLocaleString()}</div>
                         <div class="activity-desc">
                             <strong>${activity.activity_type}:</strong> ${activity.description}
                         </div>
+                        <div class="activity-time">IP: ${activity.ip_address || 'N/A'}</div>
                     </div>
                 `).join('');
             }
@@ -2401,7 +2624,8 @@
                             <th>User</th>
                             <th>Activity Type</th>
                             <th>Description</th>
-                            <th>Date</th>
+                            <th>Time</th>
+                            <th>IP Address</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2426,7 +2650,8 @@
                             </span>
                         </td>
                         <td>${activity.description}</td>
-                        <td>${formatDateOnly(activity.created_at)}</td>
+                        <td>${new Date(activity.created_at).toLocaleString()}</td>
+                        <td>${activity.ip_address || 'N/A'}</td>
                     </tr>
                 `;
             });
@@ -2435,67 +2660,87 @@
             tableContainer.innerHTML = tableHtml;
         }
 
-        // Load system stats
-        async function loadSystemStats() {
+        // Load system stats (kept as stub, section is hidden)
+        async function loadSystemStats() { }
+
+        // ─────────────────────────────────────────────────────────────
+        // SUPPORT QUERIES
+        // ─────────────────────────────────────────────────────────────
+        async function loadSupportQueries() {
+            const status = document.getElementById('support-status-filter')?.value || 'open';
+            const container = document.getElementById('support-table');
+            container.innerHTML = '<p style="color:#64748b;text-align:center;padding:30px;">Loading...</p>';
             try {
-                const response = await fetch('/api/admin/dashboard-stats');
-                const data = await response.json();
-
-                if (data.success) {
-                    const container = document.getElementById('systemStatsContainer');
-                    if (!container) return;
-
-                    container.innerHTML = `
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h3>Total Users</h3>
-                                <div class="stat-number">${data.stats.users.total}</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h3>Active Users</h3>
-                                <div class="stat-number">${data.stats.users.active}</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h3>Admins</h3>
-                                <div class="stat-number">${data.stats.users.admins}</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-crown"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h3>Total Predictions</h3>
-                                <div class="stat-number">${data.stats.system.total_predictions}</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h3>Total Datasets</h3>
-                                <div class="stat-number">${data.stats.system.total_datasets}</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-database"></i>
-                            </div>
-                        </div>
-                    `;
+                const r = await fetch(`/api/admin/support/queries?status=${status}`);
+                const d = await r.json();
+                const queries = d.queries || [];
+                if (!queries.length) {
+                    container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;">No ${status} support queries.</p>`;
+                    return;
                 }
-            } catch (error) {
-                console.error('Error loading system stats:', error);
+                const statusColors = { open: '#ff9e00', resolved: '#06d6a0' };
+                container.innerHTML = `
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>User</th><th>Type</th><th>Description</th>
+                            <th>Screenshot</th><th>Status</th><th>Submitted</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>${queries.map(q => `
+                            <tr>
+                                <td>${q.id}</td>
+                                <td><strong>${escapeAdminHtml(q.user_name || q.user_id)}</strong><br>
+                                    <small style="color:#64748b;">${escapeAdminHtml(q.user_email || '')}</small></td>
+                                <td><span style="background:#e0e7ff;color:#4361ee;padding:3px 9px;border-radius:12px;font-size:0.82em;">${escapeAdminHtml(q.issue_type || 'General')}</span></td>
+                                <td style="max-width:200px;font-size:0.85em;">${escapeAdminHtml(q.description || '—')}</td>
+                                <td style="text-align:center;">${q.has_screenshot
+                        ? `<button onclick="viewScreenshot(${q.id})" style="background:#4361ee;color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.82em;">🖼 View</button>`
+                        : '<span style="color:#94a3b8;font-size:0.82em;">None</span>'}</td>
+                                <td><span style="padding:4px 10px;border-radius:20px;background:${statusColors[q.status] || '#64748b'};color:#fff;font-size:0.82em;font-weight:600;">${q.status}</span></td>
+                                <td style="font-size:0.85em;">${new Date(q.created_at || Date.now()).toLocaleDateString()}</td>
+                                <td>${q.status === 'open'
+                        ? `<button onclick="openResolveModal(${q.id})" style="background:#06d6a0;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85em;">✅ Resolve</button>`
+                        : `<span style="font-size:0.82em;color:#64748b;">${escapeAdminHtml(q.admin_response || 'Resolved')}</span>`}
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                container.innerHTML = `<p style="color:#dc2626;">${e.message}</p>`;
             }
+        }
+
+        function openResolveModal(queryId) {
+            document.getElementById('resolve-query-id').value = queryId;
+            document.getElementById('resolve-response').value = '';
+            document.getElementById('resolve-query-modal').style.display = 'flex';
+        }
+
+        async function confirmResolveQuery() {
+            const queryId = document.getElementById('resolve-query-id').value;
+            const response = document.getElementById('resolve-response').value.trim() || 'Your issue has been resolved.';
+            document.getElementById('resolve-query-modal').style.display = 'none';
+            try {
+                showLoading();
+                const r = await fetch(`/api/admin/support/queries/${queryId}/resolve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ response })
+                });
+                const d = await r.json();
+                showAlert(d.message || (d.success ? 'Resolved' : 'Error'), d.success ? 'success' : 'error');
+                if (d.success) loadSupportQueries();
+            } catch (e) {
+                showAlert('Error resolving query', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function viewScreenshot(queryId) {
+            const modal = document.getElementById('screenshot-modal');
+            const img = document.getElementById('screenshot-img');
+            img.src = `/api/support/screenshot/${queryId}?t=${Date.now()}`;
+            modal.style.display = 'flex';
         }
 
         // Export functions
@@ -2518,7 +2763,7 @@
                     p.predicted_value || 'N/A',
                     p.accuracy ? (p.accuracy * 100).toFixed(2) + '%' : 'N/A',
                     p.prediction_type || 'standard',
-                    formatDateOnly(p.prediction_date)
+                    p.prediction_date ? new Date(p.prediction_date).toLocaleString() : 'N/A'
                 ])
             ].map(row => row.join(',')).join('\n');
 
@@ -2595,6 +2840,398 @@
             if (event.target === datasetModal) {
                 closeDatasetModal();
             }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ROLE MANAGEMENT
+        // ─────────────────────────────────────────────────────────────
+        async function changeUserRole(userId, newRole) {
+            if (!confirm(`Change role to "${newRole}"?`)) {
+                loadAllUsers();
+                return;
+            }
+            try {
+                showLoading();
+                const r = await fetch(`/api/admin/user/${userId}/role`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: newRole })
+                });
+                const d = await r.json();
+                showAlert(d.message || (d.success ? 'Role updated' : 'Failed'), d.success ? 'success' : 'error');
+                if (d.success) loadAllUsers();
+            } catch (e) {
+                showAlert('Error updating role', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // DATASET APPROVALS
+        // ─────────────────────────────────────────────────────────────
+        async function loadApprovals() {
+            const status = document.getElementById('approvals-status-filter')?.value || 'pending';
+            const container = document.getElementById('approvals-table');
+            container.innerHTML = '<p style="color:#64748b;text-align:center;padding:30px;">Loading...</p>';
+            try {
+                const r = await fetch(`/api/admin/dataset-approvals?status=${status}`);
+                const d = await r.json();
+                const approvals = d.items || [];
+                if (!approvals.length) {
+                    container.innerHTML = `<p style="color:#64748b;text-align:center;padding:30px;">No ${status} approvals.</p>`;
+                    return;
+                }
+                const statusColors = { pending: '#ff9e00', approved: '#06d6a0', rejected: '#ef476f' };
+                container.innerHTML = `
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>User</th><th>Dataset</th><th>Rows</th><th>Cols</th><th>Submitted</th>
+                            <th>Status</th><th>Note</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>${approvals.map(a => `
+                            <tr>
+                                <td>${a.id}</td>
+                                <td><strong>${escapeAdminHtml(a.user_name || a.dataset_user_id)}</strong><br><small style="color:#64748b;">${escapeAdminHtml(a.user_email || '')}</small></td>
+                                <td><strong>${escapeAdminHtml(a.dataset_name)}</strong></td>
+                                <td>${a.row_count ?? '—'}</td>
+                                <td>${a.column_count ?? '—'}</td>
+                                <td style="font-size:0.85em;">${new Date(a.created_at || Date.now()).toLocaleDateString()}</td>
+                                <td><span style="padding:4px 10px;border-radius:20px;background:${statusColors[a.status] || '#64748b'};color:#fff;font-size:0.82em;font-weight:600;">${a.status}</span></td>
+                                <td style="max-width:160px;font-size:0.85em;">${escapeAdminHtml(a.admin_note || '—')}</td>
+                                <td>
+                                    <div style="display:flex;flex-direction:column;gap:5px;min-width:110px;">
+                                        <button onclick="previewApprovalDataset(${a.id},'${escapeAdminHtml(a.dataset_name)}')" style="background:#4361ee;color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.8em;">&#128200; View Data</button>
+                                        <button onclick="analyzeApprovalDataset(${a.id},'${escapeAdminHtml(a.dataset_name)}')" style="background:#7c3aed;color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.8em;">&#128269; Analyze</button>
+                                        ${a.status === 'pending' ? `
+                                        <button onclick="reviewApproval(${a.id},'approve')" style="background:#06d6a0;color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.8em;">&#10003; Approve</button>
+                                        <button onclick="openRejectModal(${a.id})" style="background:#ef476f;color:#fff;border:none;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:0.8em;">&#10007; Reject</button>
+                                        ` : ''}
+                                    </div>
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                container.innerHTML = `<p style="color:#dc2626;">${e.message}</p>`;
+            }
+        }
+
+        async function previewApprovalDataset(approvalId, datasetName) {
+            const modal = document.getElementById('approval-preview-modal');
+            const subtitle = document.getElementById('preview-subtitle');
+            const statsBar = document.getElementById('preview-stats-bar');
+            const tableDiv = document.getElementById('preview-table-container');
+            modal.style.display = 'flex';
+            subtitle.textContent = 'Loading...';
+            statsBar.innerHTML = '';
+            tableDiv.innerHTML = '<p style="text-align:center;padding:40px;color:#64748b;">&#128200; Loading dataset...</p>';
+            try {
+                const r = await fetch(`/api/admin/dataset-approvals/${approvalId}/preview`);
+                const d = await r.json();
+                if (!d.success) { tableDiv.innerHTML = `<p style="color:#dc2626;padding:20px;">${d.message}</p>`; return; }
+                subtitle.textContent = `${d.dataset_name} — showing first ${d.preview.length} of ${d.stats.rows} rows`;
+                // Stats bar
+                const nullInfo = Object.entries(d.stats.null_counts).filter(([, v]) => v > 0)
+                    .map(([k, v]) => `<span style="background:#fff3cd;padding:3px 8px;border-radius:8px;font-size:0.8em;">⚠️ ${k}: ${v} nulls</span>`).join('');
+                statsBar.innerHTML = `
+                    <span style="background:#e0f7fa;padding:4px 12px;border-radius:12px;font-size:0.85em;font-weight:600;">&#128200; ${d.stats.rows} rows</span>
+                    <span style="background:#e8f5e9;padding:4px 12px;border-radius:12px;font-size:0.85em;font-weight:600;">&#128203; ${d.stats.cols} columns</span>
+                    ${nullInfo || '<span style="color:#06d6a0;font-size:0.85em;">✅ No null values</span>'}`;
+                // Table
+                if (!d.preview.length) { tableDiv.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px;">No rows to show.</p>'; return; }
+                const cols = d.stats.columns;
+                tableDiv.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.83em;">
+                    <thead style="position:sticky;top:0;background:#f0f4ff;">
+                        <tr>${cols.map(c => `<th style="padding:9px 12px;text-align:left;white-space:nowrap;border-bottom:2px solid #e2e8f0;color:#334155;">${escapeAdminHtml(c)}</th>`).join('')}</tr>
+                    </thead>
+                    <tbody>
+                        ${d.preview.map((row, i) => `<tr style="background:${i % 2 ? '#f8faff' : '#fff'}">
+                            ${cols.map(c => `<td style="padding:7px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;">${row[c] === null || row[c] === undefined ? '<span style="color:#cbd5e1;">null</span>' : escapeAdminHtml(String(row[c]))}</td>`).join('')}
+                        </tr>`).join('')}
+                    </tbody>
+                </table>`;
+            } catch (e) {
+                tableDiv.innerHTML = `<p style="color:#dc2626;padding:20px;">${e.message}</p>`;
+            }
+        }
+
+        async function analyzeApprovalDataset(approvalId, datasetName) {
+            const modal = document.getElementById('approval-analysis-modal');
+            const subtitle = document.getElementById('analysis-subtitle');
+            const body = document.getElementById('analysis-body');
+            modal.style.display = 'flex';
+            subtitle.textContent = datasetName;
+            body.innerHTML = '<div style="text-align:center;padding:50px;"><div style="font-size:2em;">&#128269;</div><p style="margin-top:12px;color:#64748b;">Scanning dataset for originality...</p></div>';
+            try {
+                const r = await fetch(`/api/admin/dataset-approvals/${approvalId}/analyze`, { method: 'POST' });
+                const d = await r.json();
+                if (!d.success) { body.innerHTML = `<p style="color:#dc2626;">${d.message}</p>`; return; }
+
+                // Originality score ring
+                const score = d.originality_score;
+                const color = d.verdict_color;
+
+                // Matched sources section
+                const matchedHtml = d.matched_sources && d.matched_sources.length
+                    ? d.matched_sources.map(s => `
+                        <div style="padding:10px 14px;background:#fff3e0;border-left:4px solid #ff9e00;border-radius:8px;margin-bottom:8px;">
+                            <div style="font-weight:700;color:#92400e;font-size:0.9em;">&#9888; Matches: ${escapeAdminHtml(s.source)}</div>
+                            <div style="color:#78350f;font-size:0.82em;margin-top:3px;">Column overlap: ${s.match_pct}% — matched: <em>${s.matched_cols.join(', ')}</em></div>
+                        </div>`).join('')
+                    : '<div style="color:#06d6a0;font-size:0.88em;">&#10003; No known public dataset fingerprints matched.</div>';
+
+                const internalHtml = d.similar_internal && d.similar_internal.length
+                    ? d.similar_internal.map(s => `
+                        <div style="padding:8px 12px;background:#fef2f2;border-left:4px solid #ef476f;border-radius:8px;margin-bottom:6px;font-size:0.85em;">
+                            &#128260; Similar to internal dataset: <strong>${escapeAdminHtml(s.dataset)}</strong> (${s.similarity_pct}% column similarity)
+                        </div>`).join('')
+                    : '<div style="color:#06d6a0;font-size:0.88em;">&#10003; No similar datasets found in your system.</div>';
+
+                body.innerHTML = `
+                    <!-- Score Ring -->
+                    <div style="display:flex;align-items:center;gap:24px;background:#f8faff;border-radius:16px;padding:20px 24px;margin-bottom:22px;">
+                        <div style="position:relative;width:90px;height:90px;flex-shrink:0;">
+                            <svg viewBox="0 0 36 36" style="width:90px;height:90px;transform:rotate(-90deg);">
+                                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e2e8f0" stroke-width="3"/>
+                                <circle cx="18" cy="18" r="15.9" fill="none" stroke="${color}" stroke-width="3"
+                                    stroke-dasharray="${score} ${100 - score}" stroke-linecap="round"/>
+                            </svg>
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1.25em;font-weight:800;color:${color};">${score}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size:1.15em;font-weight:800;color:${color};">${escapeAdminHtml(d.verdict)}</div>
+                            <div style="color:#64748b;font-size:0.85em;margin-top:4px;">Originality Score: <strong>${score} / 100</strong></div>
+                            <div style="color:#64748b;font-size:0.83em;margin-top:2px;">${d.total_rows} rows &bull; ${d.total_cols} columns</div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center;">
+                            <div style="font-size:1.6em;font-weight:800;color:${d.duplicate_pct > 10 ? '#ef476f' : d.duplicate_pct > 5 ? '#ff9e00' : '#06d6a0'}">${d.duplicate_pct}%</div>
+                            <div style="color:#64748b;font-size:0.82em;margin-top:4px;">Duplicate Rows<br><small>(${d.duplicate_rows} of ${d.total_rows})</small></div>
+                        </div>
+                        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center;">
+                            <div style="font-size:1.6em;font-weight:800;color:${d.null_pct > 20 ? '#ef476f' : d.null_pct > 5 ? '#ff9e00' : '#06d6a0'}">${d.null_pct}%</div>
+                            <div style="color:#64748b;font-size:0.82em;margin-top:4px;">Missing Values</div>
+                        </div>
+                    </div>
+
+                    <!-- Known Source Match -->
+                    <div style="margin-bottom:18px;">
+                        <h4 style="color:#334155;font-size:0.92em;margin-bottom:10px;">&#127760; Known Public Dataset Fingerprints</h4>
+                        ${matchedHtml}
+                    </div>
+
+                    <!-- Internal similarity -->
+                    <div style="margin-bottom:18px;">
+                        <h4 style="color:#334155;font-size:0.92em;margin-bottom:10px;">&#128260; Internal Dataset Similarity</h4>
+                        ${internalHtml}
+                    </div>
+
+                    <!-- Columns list -->
+                    <div style="background:#f8faff;border-radius:10px;padding:14px;">
+                        <h4 style="color:#334155;font-size:0.88em;margin-bottom:8px;">&#128203; Columns (${d.columns.length})</h4>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                            ${d.columns.map(c => `<span style="background:#e0e7ff;color:#4338ca;padding:3px 10px;border-radius:20px;font-size:0.78em;">${escapeAdminHtml(c)}</span>`).join('')}
+                        </div>
+                    </div>`;
+            } catch (e) {
+                body.innerHTML = `<p style="color:#dc2626;">${e.message}</p>`;
+            }
+        }
+
+        function openRejectModal(approvalId) {
+            document.getElementById('reject-approval-id').value = approvalId;
+            document.getElementById('reject-note').value = '';
+            document.getElementById('reject-note-modal').style.display = 'flex';
+        }
+
+        async function confirmReject() {
+            const approvalId = document.getElementById('reject-approval-id').value;
+            const note = document.getElementById('reject-note').value.trim();
+            document.getElementById('reject-note-modal').style.display = 'none';
+            await reviewApproval(approvalId, 'reject', note);
+        }
+
+        async function reviewApproval(approvalId, action, note = '') {
+            try {
+                showLoading();
+                const r = await fetch(`/api/admin/dataset-approvals/${approvalId}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, note })
+                });
+                const d = await r.json();
+                showAlert(d.message || (d.success ? 'Done' : 'Error'), d.success ? 'success' : 'error');
+                if (d.success) loadApprovals();
+            } catch (e) {
+                showAlert('Error reviewing approval', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // GLOBAL LIBRARY
+        // ─────────────────────────────────────────────────────────────
+        async function loadGlobalLibrary() {
+            const container = document.getElementById('global-library-table');
+            container.innerHTML = '<p style="color:#64748b;text-align:center;padding:30px;">Loading...</p>';
+            try {
+                const r = await fetch('/api/admin/global-datasets');
+                const d = await r.json();
+                const datasets = d.datasets || [];
+                if (!datasets.length) {
+                    container.innerHTML = '<p style="color:#64748b;text-align:center;padding:30px;">No global datasets yet.</p>';
+                    return;
+                }
+                container.innerHTML = `
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>Name</th><th>Rows</th><th>Columns</th>
+                            <th>Tags</th><th>Description</th><th>Added By</th><th>Actions</th>
+                        </tr></thead>
+                        <tbody>${datasets.map(ds => `
+                            <tr>
+                                <td>${ds.id}</td>
+                                <td><strong>${escapeAdminHtml(ds.name)}</strong></td>
+                                <td>${ds.row_count ?? '—'}</td>
+                                <td>${ds.column_count ?? '—'}</td>
+                                <td style="font-size:0.82em;color:#4361ee;">${escapeAdminHtml(ds.tags || '')}</td>
+                                <td style="max-width:180px;font-size:0.85em;">${escapeAdminHtml(ds.description || '—')}</td>
+                                <td>${ds.uploaded_by || 'admin'}</td>
+                                <td>
+                                    <button onclick="deleteGlobalDataset(${ds.id})" style="background:#ef476f;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85em;">🗑️ Delete</button>
+                                </td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>`;
+            } catch (e) {
+                container.innerHTML = `<p style="color:#dc2626;">${e.message}</p>`;
+            }
+        }
+
+        async function uploadGlobalDataset() {
+            const name = document.getElementById('glib-name').value.trim();
+            const tags = document.getElementById('glib-tags').value.trim();
+            const desc = document.getElementById('glib-description').value.trim();
+            const file = document.getElementById('glib-file').files[0];
+
+            if (!name || !file) { showAlert('Dataset name and file are required.', 'error'); return; }
+
+            const fd = new FormData();
+            fd.append('name', name);
+            fd.append('tags', tags);
+            fd.append('description', desc);
+            fd.append('file', file);
+
+            const result = document.getElementById('glib-upload-result');
+            result.innerHTML = '<p style="color:#64748b;">⏳ Uploading...</p>';
+            try {
+                showLoading();
+                const r = await fetch('/api/admin/global-datasets', { method: 'POST', body: fd });
+                const d = await r.json();
+                result.innerHTML = `<div style="padding:10px;border-radius:8px;background:${d.success ? '#f0fdf4' : '#fee2e2'};color:${d.success ? '#166534' : '#dc2626'};">${escapeAdminHtml(d.message)}</div>`;
+                if (d.success) { loadGlobalLibrary(); document.getElementById('global-upload-form').reset(); }
+            } catch (e) {
+                result.innerHTML = `<div style="padding:10px;border-radius:8px;background:#fee2e2;color:#dc2626;">${e.message}</div>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function deleteGlobalDataset(datasetId) {
+            if (!confirm('Delete this global dataset?')) return;
+            try {
+                showLoading();
+                const r = await fetch(`/api/admin/global-datasets/${datasetId}`, { method: 'DELETE' });
+                const d = await r.json();
+                showAlert(d.message || (d.success ? 'Deleted' : 'Error'), d.success ? 'success' : 'error');
+                if (d.success) loadGlobalLibrary();
+            } catch (e) {
+                showAlert('Error deleting dataset', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // ADVANCED ANALYTICS
+        // ─────────────────────────────────────────────────────────────
+        let _advCharts = {};
+        async function loadAdvancedAnalytics() {
+            try {
+                showLoading();
+                const r = await fetch('/api/admin/advanced-analytics');
+                const d = await r.json();
+                if (!d.success) { showAlert('Error loading analytics', 'error'); return; }
+
+                const stats = d.stats || {};
+                const statsDiv = document.getElementById('adv-analytics-stats');
+                statsDiv.innerHTML = `
+                    <div class="stat-card"><div class="stat-info"><h3>Total Predictions</h3><div class="stat-number">${stats.total_predictions || 0}</div></div><div class="stat-icon"><i class="fas fa-chart-line"></i></div></div>
+                    <div class="stat-card"><div class="stat-info"><h3>Avg Accuracy</h3><div class="stat-number">${(stats.avg_accuracy || 0).toFixed(1)}%</div></div><div class="stat-icon"><i class="fas fa-bullseye"></i></div></div>
+                    <div class="stat-card"><div class="stat-info"><h3>Total Users</h3><div class="stat-number">${stats.total_users || 0}</div></div><div class="stat-icon"><i class="fas fa-users"></i></div></div>
+                    <div class="stat-card"><div class="stat-info"><h3>Total Datasets</h3><div class="stat-number">${stats.total_datasets || 0}</div></div><div class="stat-icon"><i class="fas fa-database"></i></div></div>
+                `;
+
+                const modelColors = ['#4361ee', '#06d6a0', '#ff9e00', '#ef476f', '#7c3aed'];
+
+                // Model usage doughnut
+                const models = d.model_distribution || [];
+                renderAdvChart('advModelChart', 'doughnut', {
+                    labels: models.map(m => (m.model || '').replace(/_/g, ' ')),
+                    datasets: [{ data: models.map(m => m.count || 0), backgroundColor: modelColors }]
+                }, { plugins: { legend: { position: 'bottom' } } });
+
+                // Top metrics bar
+                const topMetrics = (d.top_metrics || []).slice(0, 6);
+                renderAdvChart('advMetricsChart', 'bar', {
+                    labels: topMetrics.map(m => m.metric || ''),
+                    datasets: [{ label: 'Predictions', data: topMetrics.map(m => m.count || 0), backgroundColor: '#4361ee', borderRadius: 6 }]
+                }, { plugins: { legend: { display: false } }, scales: { x: { ticks: { maxRotation: 30 } } } });
+
+                // Accuracy distribution pie
+                const dist = d.accuracy_distribution || {};
+                renderAdvChart('advAccChart', 'pie', {
+                    labels: ['Excellent (≥90%)', 'Good (70-90%)', 'Fair (50-70%)', 'Poor (<50%)'],
+                    datasets: [{
+                        data: [dist.excellent || 0, dist.good || 0, dist.fair || 0, dist.poor || 0],
+                        backgroundColor: ['#06d6a0', '#4361ee', '#ff9e00', '#ef476f']
+                    }]
+                }, { plugins: { legend: { position: 'bottom' } } });
+
+                // Predictions over time line
+                const timeline = d.predictions_over_time || [];
+                renderAdvChart('advTimeChart', 'line', {
+                    labels: timeline.map(t => t.date || ''),
+                    datasets: [{
+                        label: 'Predictions', data: timeline.map(t => t.count || 0),
+                        borderColor: '#4361ee', backgroundColor: 'rgba(67,97,238,0.08)', tension: 0.4, fill: true
+                    }]
+                }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } });
+
+            } catch (e) {
+                showAlert('Error: ' + e.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderAdvChart(id, type, data, options = {}) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            if (_advCharts[id]) { _advCharts[id].destroy(); delete _advCharts[id]; }
+            _advCharts[id] = new Chart(ctx.getContext('2d'), {
+                type, data,
+                options: { responsive: true, maintainAspectRatio: false, ...options }
+            });
+        }
+
+        function escapeAdminHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
     </script>
 </body>
