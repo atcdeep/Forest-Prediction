@@ -1,3 +1,13 @@
+import sys
+import io
+try:
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    elif hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 from flask_cors import CORS
 import pandas as pd
@@ -420,6 +430,10 @@ def log_user_activity(user_id, activity_type, description, ip_address=None, user
         connection.close()
     except Exception as e:
         print(f"Error logging activity: {e}")
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_file(os.path.join(app.static_folder, 'forest-predict-icon.png'), mimetype='image/png')
 
 @app.route('/')
 def index():
