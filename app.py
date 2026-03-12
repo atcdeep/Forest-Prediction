@@ -9,8 +9,7 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-import mysql.connector
-from mysql.connector import Error
+import sqlite3
 import os
 import json
 from datetime import datetime, timedelta
@@ -32,255 +31,294 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # For session management
 CORS(app)
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'Harshdeep*123',
-    'database': 'forest_prediction_db'
-}
+# Database configuration - SQLite
+DB_PATH = 'forest_prediction.db'
+
+
+# ── SQLite / mysql.connector compatibility layer ─────────────────────────────
+class DictRow(dict):
+    """Dict that also supports integer-index access (like tuple rows)."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+class _SQLiteCursor:
+    """Cursor wrapper: converts %s→?, NOW()→CURRENT_TIMESTAMP, returns DictRows."""
+    def __init__(self, cur):
+        self._cur = cur
+
+    def execute(self, sql, params=None):
+        sql = sql.replace('%s', '?').replace('NOW()', 'CURRENT_TIMESTAMP')
+        if params is not None:
+            self._cur.execute(sql, params)
+        else:
+            self._cur.execute(sql)
+
+    def _row(self, row):
+        if row is None or not self._cur.description:
+            return row
+        return DictRow({self._cur.description[i][0]: row[i]
+                        for i in range(len(self._cur.description))})
+
+    def fetchone(self):
+        return self._row(self._cur.fetchone())
+
+    def fetchall(self):
+        desc = self._cur.description
+        if not desc:
+            return self._cur.fetchall()
+        rows = self._cur.fetchall()
+        return [DictRow({desc[i][0]: row[i] for i in range(len(desc))}) for row in rows]
+
+    @property
+    def lastrowid(self):
+        return self._cur.lastrowid
+
+    @property
+    def rowcount(self):
+        return self._cur.rowcount
+
+    def close(self):
+        self._cur.close()
+
+
+class _SQLiteConnection:
+    """Connection wrapper compatible with mysql.connector API."""
+    def __init__(self, conn):
+        self._conn = conn
+
+    def cursor(self, dictionary=False):
+        return _SQLiteCursor(self._conn.cursor())
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
 
 # Initialize database with proper error handling
 def init_database():
     try:
-        # First connect without database
-        connection = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
-        
-        cursor = connection.cursor()
-        
-        # Drop and create database
-        cursor.execute(f"DROP DATABASE IF EXISTS {DB_CONFIG['database']}")
-        cursor.execute(f"CREATE DATABASE {DB_CONFIG['database']}")
-        cursor.execute(f"USE {DB_CONFIG['database']}")
-        
-        # Create tables
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA foreign_keys = ON")
+        cursor = conn.cursor()
+
         cursor.execute('''
-            CREATE TABLE users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                uid VARCHAR(255) UNIQUE,
-                email VARCHAR(255) UNIQUE,
-                name VARCHAR(255),
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uid TEXT UNIQUE,
+                email TEXT UNIQUE,
+                name TEXT,
                 photo_url TEXT,
-                provider VARCHAR(50),
-                role VARCHAR(50) DEFAULT 'user',
-                is_active BOOLEAN DEFAULT TRUE,
-                global_library_enabled BOOLEAN DEFAULT TRUE,
-                last_login TIMESTAMP NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                provider TEXT,
+                role TEXT DEFAULT 'user',
+                is_active INTEGER DEFAULT 1,
+                global_library_enabled INTEGER DEFAULT 1,
+                last_login DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        
+
         cursor.execute('''
-            CREATE TABLE datasets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                file_path VARCHAR(500),
-                row_count INT DEFAULT 0,
-                column_count INT DEFAULT 0,
-                is_primary BOOLEAN DEFAULT FALSE,
-                is_default BOOLEAN DEFAULT FALSE,
-                uploaded_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CREATE TABLE IF NOT EXISTS datasets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                file_path TEXT,
+                row_count INTEGER DEFAULT 0,
+                column_count INTEGER DEFAULT 0,
+                is_primary INTEGER DEFAULT 0,
+                is_default INTEGER DEFAULT 0,
+                uploaded_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                 description TEXT,
-                UNIQUE KEY unique_user_dataset (user_id, name),
+                UNIQUE (user_id, name),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
-        
+
         cursor.execute('''
-            CREATE TABLE predictions (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255),
-                predicted_metric VARCHAR(255),
-                year INT,
-                predicted_value FLOAT,
-                accuracy FLOAT,
-                prediction_type VARCHAR(50) DEFAULT 'standard',
-                prediction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                model_used VARCHAR(100) DEFAULT 'linear_regression',
+            CREATE TABLE IF NOT EXISTS predictions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                dataset_name TEXT,
+                predicted_metric TEXT,
+                year INTEGER,
+                predicted_value REAL,
+                accuracy REAL,
+                prediction_type TEXT DEFAULT 'standard',
+                prediction_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                model_used TEXT DEFAULT 'linear_regression',
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
-        
+
         cursor.execute('''
-            CREATE TABLE dataset_columns (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255),
-                column_name VARCHAR(255),
-                data_type VARCHAR(50),
-                is_numeric BOOLEAN DEFAULT FALSE,
-                min_value FLOAT,
-                max_value FLOAT,
+            CREATE TABLE IF NOT EXISTS dataset_columns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                dataset_name TEXT,
+                column_name TEXT,
+                data_type TEXT,
+                is_numeric INTEGER DEFAULT 0,
+                min_value REAL,
+                max_value REAL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
-        
+
         cursor.execute('''
-            CREATE TABLE user_activity (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT,
-                activity_type VARCHAR(100),
+            CREATE TABLE IF NOT EXISTS user_activity (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                activity_type TEXT,
                 description TEXT,
-                ip_address VARCHAR(45),
+                ip_address TEXT,
                 user_agent TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
-        
-        # Create indexes
-        cursor.execute('CREATE INDEX idx_predictions_user ON predictions(user_id)')
-        cursor.execute('CREATE INDEX idx_datasets_user ON datasets(user_id)')
-        cursor.execute('CREATE INDEX idx_predictions_date ON predictions(prediction_date)')
-        cursor.execute('CREATE INDEX idx_datasets_primary ON datasets(is_primary)')
-        cursor.execute('CREATE INDEX idx_datasets_name ON datasets(name)')
-        cursor.execute('CREATE INDEX idx_users_email ON users(email)')
-        cursor.execute('CREATE INDEX idx_activity_user ON user_activity(user_id)')
 
-        # ── NEW TABLES ──────────────────────────────────────────────────────
-
-        # Global datasets (admin-managed, visible to all users)
         cursor.execute('''
-            CREATE TABLE global_datasets (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255) NOT NULL UNIQUE,
-                file_path VARCHAR(500),
-                row_count INT DEFAULT 0,
-                column_count INT DEFAULT 0,
+            CREATE TABLE IF NOT EXISTS global_datasets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                file_path TEXT,
+                row_count INTEGER DEFAULT 0,
+                column_count INTEGER DEFAULT 0,
                 description TEXT,
-                tags VARCHAR(500),
-                uploaded_by INT,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tags TEXT,
+                uploaded_by INTEGER,
+                is_active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL
             )
         ''')
 
-        # Dataset status / approval
         cursor.execute('''
-            CREATE TABLE dataset_approvals (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                dataset_user_id INT NOT NULL,
-                dataset_name VARCHAR(255) NOT NULL,
-                status ENUM("pending","approved","rejected") DEFAULT "pending",
+            CREATE TABLE IF NOT EXISTS dataset_approvals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                dataset_user_id INTEGER NOT NULL,
+                dataset_name TEXT NOT NULL,
+                status TEXT DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected')),
                 admin_note TEXT,
-                reviewed_by INT,
-                reviewed_at TIMESTAMP NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_by INTEGER,
+                reviewed_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (dataset_user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
             )
         ''')
 
-        # Favorites (starred datasets)
         cursor.execute('''
-            CREATE TABLE favorites (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255) NOT NULL,
-                label ENUM("favorite","primary","archived") DEFAULT "favorite",
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY uniq_fav (user_id, dataset_name),
+            CREATE TABLE IF NOT EXISTS favorites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                dataset_name TEXT NOT NULL,
+                label TEXT DEFAULT 'favorite' CHECK(label IN ('favorite','primary','archived')),
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE (user_id, dataset_name),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
 
-        # Chat history (AI assistant)
         cursor.execute('''
-            CREATE TABLE chat_history (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                role ENUM("user","assistant") NOT NULL,
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('user','assistant')),
                 message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
 
-        # Cleaned dataset versions
         cursor.execute('''
-            CREATE TABLE dataset_clean_log (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                dataset_name VARCHAR(255) NOT NULL,
-                operation VARCHAR(100),
-                rows_before INT,
-                rows_after INT,
+            CREATE TABLE IF NOT EXISTS dataset_clean_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                dataset_name TEXT NOT NULL,
+                operation TEXT,
+                rows_before INTEGER,
+                rows_after INTEGER,
                 details TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
 
-        # Indexes for new tables
-        cursor.execute('CREATE INDEX idx_favorites_user ON favorites(user_id)')
-        cursor.execute('CREATE INDEX idx_chat_user ON chat_history(user_id)')
-        cursor.execute('CREATE INDEX idx_approvals_status ON dataset_approvals(status)')
-
-        # Notifications (admin approval + support resolved messages)
         cursor.execute('''
-            CREATE TABLE notifications (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                type VARCHAR(50) DEFAULT 'info',
-                title VARCHAR(255),
+            CREATE TABLE IF NOT EXISTS notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                type TEXT DEFAULT 'info',
+                title TEXT,
                 message TEXT,
-                is_read BOOLEAN DEFAULT FALSE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         ''')
 
-        # Support Queries
         cursor.execute('''
-            CREATE TABLE support_queries (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                issue_type VARCHAR(100),
+            CREATE TABLE IF NOT EXISTS support_queries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                issue_type TEXT,
                 description TEXT,
-                screenshot_path VARCHAR(500),
-                status ENUM("open","resolved") DEFAULT "open",
+                screenshot_path TEXT,
+                status TEXT DEFAULT 'open' CHECK(status IN ('open','resolved')),
                 admin_response TEXT,
-                resolved_by INT,
-                resolved_at TIMESTAMP NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                resolved_by INTEGER,
+                resolved_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
             )
         ''')
 
-        cursor.execute('CREATE INDEX idx_notifications_user ON notifications(user_id)')
-        cursor.execute('CREATE INDEX idx_support_status ON support_queries(status)')
+        # Indexes
+        for idx in [
+            'CREATE INDEX IF NOT EXISTS idx_predictions_user ON predictions(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_datasets_user ON datasets(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_predictions_date ON predictions(prediction_date)',
+            'CREATE INDEX IF NOT EXISTS idx_datasets_primary ON datasets(is_primary)',
+            'CREATE INDEX IF NOT EXISTS idx_datasets_name ON datasets(name)',
+            'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+            'CREATE INDEX IF NOT EXISTS idx_activity_user ON user_activity(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_activity_date ON user_activity(created_at)',
+            'CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_history(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_approvals_status ON dataset_approvals(status)',
+            'CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)',
+            'CREATE INDEX IF NOT EXISTS idx_support_status ON support_queries(status)',
+        ]:
+            cursor.execute(idx)
 
-        # ── END NEW TABLES ───────────────────────────────────────────────────
-        
-        # Create default admin user
+        # Default admin user
         cursor.execute('''
-            INSERT IGNORE INTO users (uid, email, name, role, last_login) 
-            VALUES (%s, %s, %s, %s, NOW())
+            INSERT OR IGNORE INTO users (uid, email, name, role, last_login)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
         ''', ('admin_local', 'admin@forestpredict.com', 'Admin User', 'admin'))
-        
-        connection.commit()
+
+        conn.commit()
         print("✅ Database initialized successfully")
-        
-        # Get admin ID
-        admin_id = get_admin_id(cursor)
-        
-        # Load default forest_data.csv for admin if it exists
+
+        # Get admin ID and load default data
+        cursor.execute("SELECT id FROM users WHERE email = 'admin@forestpredict.com'")
+        row = cursor.fetchone()
+        admin_id = row[0] if row else None
+
         if admin_id and os.path.exists('forest_data.csv'):
-            load_forest_data_for_admin(cursor, connection, admin_id)
-        
+            load_forest_data_for_admin(cursor, conn, admin_id)
+
         cursor.close()
-        connection.close()
-        
-    except Error as e:
+        conn.close()
+
+    except Exception as e:
         print(f"❌ Error initializing database: {e}")
         traceback.print_exc()
 
@@ -298,29 +336,27 @@ def load_forest_data_for_admin(cursor, connection, admin_id):
     try:
         df = pd.read_csv('forest_data.csv')
         print(f"📊 Loading forest_data.csv with {len(df)} rows and {len(df.columns)} columns for admin")
-        
-        # Insert dataset for admin
+
         cursor.execute(
-            """INSERT INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description) 
-            VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-            (admin_id, 'forest_data', len(df), len(df.columns), True, True, 'Forest dataset with environmental metrics')
+            """INSERT OR IGNORE INTO datasets (user_id, name, row_count, column_count, is_primary, is_default, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (admin_id, 'forest_data', len(df), len(df.columns), 1, 1, 'Forest dataset with environmental metrics')
         )
-        
-        # Store column metadata for admin
+
         for column in df.columns:
-            is_numeric = pd.api.types.is_numeric_dtype(df[column])
+            is_numeric = int(pd.api.types.is_numeric_dtype(df[column]))
             min_val = float(df[column].min()) if is_numeric and len(df[column].dropna()) > 0 else None
             max_val = float(df[column].max()) if is_numeric and len(df[column].dropna()) > 0 else None
-            
+
             cursor.execute(
-                """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                """INSERT INTO dataset_columns (user_id, dataset_name, column_name, data_type, is_numeric, min_value, max_value)
+                VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (admin_id, 'forest_data', column, str(df[column].dtype), is_numeric, min_val, max_val)
             )
-        
+
         connection.commit()
         print("✅ forest_data.csv loaded successfully for admin")
-            
+
     except Exception as e:
         print(f"❌ Error loading forest_data.csv: {e}")
         traceback.print_exc()
@@ -329,18 +365,14 @@ def load_forest_data_for_admin(cursor, connection, admin_id):
 init_database()
 
 def get_db_connection():
-    """Create database connection with retry logic"""
+    """Create SQLite database connection wrapped in mysql.connector-compatible API"""
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return _SQLiteConnection(conn)
+    except Exception as e:
         print(f"❌ Database connection error: {e}")
-        try:
-            init_database()
-            connection = mysql.connector.connect(**DB_CONFIG)
-            return connection
-        except:
-            return None
+        return None
 
 def sanitize_filename(filename):
     """Remove invalid characters from filename"""
@@ -711,7 +743,7 @@ def get_stats():
             'start_year': start_year,
             'end_year': end_year,
             'has_user_data': has_user_data,
-            'last_updated': last_updated.isoformat() if last_updated else None
+            'last_updated': str(last_updated) if last_updated else None
         }
         
         return jsonify(stats)
@@ -832,7 +864,7 @@ def get_datasets():
                 'column_count': ds['actual_columns'] or ds['column_count'],
                 'is_primary': bool(ds['is_primary']),
                 'is_default': bool(ds['is_default']),
-                'uploaded_date': ds['uploaded_date'].isoformat() if ds['uploaded_date'] else None,
+                'uploaded_date': str(ds['uploaded_date']) if ds.get('uploaded_date') else None,
                 'description': ds['description']
             })
         
@@ -1657,7 +1689,7 @@ def get_predictions():
         # Format dates
         for pred in predictions:
             if pred['prediction_date']:
-                pred['prediction_date'] = pred['prediction_date'].isoformat()
+                pred['prediction_date'] = str(pred['prediction_date'])
         
         cursor.close()
         connection.close()
@@ -1886,14 +1918,10 @@ def get_users():
         users = cursor.fetchall()
         
         for user in users:
-            if user['last_login']:
-                user['last_login'] = user['last_login'].isoformat() if user['last_login'] else None
-            if user['created_at']:
-                user['created_at'] = user['created_at'].isoformat() if user['created_at'] else None
-            if user['updated_at']:
-                user['updated_at'] = user['updated_at'].isoformat() if user['updated_at'] else None
-            if user['last_activity']:
-                user['last_activity'] = user['last_activity'].isoformat() if user['last_activity'] else None
+            user['last_login'] = str(user['last_login']) if user.get('last_login') else None
+            user['created_at'] = str(user['created_at']) if user.get('created_at') else None
+            user['updated_at'] = str(user['updated_at']) if user.get('updated_at') else None
+            user['last_activity'] = str(user['last_activity']) if user.get('last_activity') else None
         
         cursor.close()
         connection.close()
@@ -1925,8 +1953,8 @@ def get_user_activity(user_id):
         activities = cursor.fetchall()
         
         for activity in activities:
-            if activity['created_at']:
-                activity['created_at'] = activity['created_at'].isoformat()
+            if activity.get('created_at'):
+                activity['created_at'] = str(activity['created_at'])
         
         cursor.close()
         connection.close()
@@ -2024,7 +2052,7 @@ def get_admin_dashboard_stats():
         cursor.execute("SELECT COUNT(*) as total_users FROM users")
         total_users = cursor.fetchone()['total_users']
         
-        cursor.execute("SELECT COUNT(*) as active_users FROM users WHERE is_active = TRUE")
+        cursor.execute("SELECT COUNT(*) as active_users FROM users WHERE is_active = 1")
         active_users = cursor.fetchone()['active_users']
         
         cursor.execute("SELECT COUNT(*) as admin_users FROM users WHERE role = 'admin'")
@@ -2034,7 +2062,7 @@ def get_admin_dashboard_stats():
         cursor.execute('''
             SELECT DATE(created_at) as date, COUNT(*) as count
             FROM user_activity
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            WHERE created_at >= datetime('now', '-7 days')
             GROUP BY DATE(created_at)
             ORDER BY date
         ''')
@@ -2557,8 +2585,8 @@ def prediction_analytics():
         acc_dist = cursor.fetchone()
 
         cursor.execute("""
-            SELECT DATE_FORMAT(prediction_date,'%%Y-%%m') as month, COUNT(*) as count
-            FROM predictions WHERE user_id=%s GROUP BY month ORDER BY month ASC
+            SELECT strftime('%Y-%m', prediction_date) as month, COUNT(*) as count
+            FROM predictions WHERE user_id=? GROUP BY month ORDER BY month ASC
         """, (user_id,))
         monthly = cursor.fetchall()
 
@@ -2707,9 +2735,9 @@ def upsert_favorite():
             return jsonify({'success': False, 'message': 'Dataset not found'})
         cursor.execute("""
             INSERT INTO favorites (user_id, dataset_name, label)
-            VALUES (%s,%s,%s)
-            ON DUPLICATE KEY UPDATE label=%s
-        """, (user_id, dataset_name, label, label))
+            VALUES (?,?,?)
+            ON CONFLICT(user_id, dataset_name) DO UPDATE SET label=excluded.label
+        """, (user_id, dataset_name, label))
         connection.commit()
         cursor.close(); connection.close()
         return jsonify({'success': True, 'message': f'Dataset marked as {label}'})
@@ -4037,13 +4065,13 @@ def admin_advanced_analytics():
         cursor.execute("""
             SELECT DATE(created_at) as date, COUNT(*) as count, activity_type
             FROM user_activity
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            WHERE created_at >= datetime('now', '-30 days')
             GROUP BY DATE(created_at), activity_type ORDER BY date ASC
         """)
         daily_activity = cursor.fetchall()
 
         cursor.execute("""
-            SELECT YEARWEEK(created_at,1) as week, COUNT(*) as new_users
+            SELECT strftime('%Y-%W', created_at) as week, COUNT(*) as new_users
             FROM users WHERE role != 'admin'
             GROUP BY week ORDER BY week DESC LIMIT 12
         """)
