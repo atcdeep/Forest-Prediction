@@ -7,6 +7,9 @@
     <title>Forest Data Analysis & Prediction System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         /* ===== GLOBAL STYLES ===== */
         :root {
@@ -581,48 +584,124 @@
         }
 
         /* ===== TABS ===== */
-        .tabs {
+        /* ===== SIDEBAR NAVIGATION ===== */
+        .app-layout {
             display: flex;
-            gap: 10px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-            background: white;
-            padding: 10px;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
+            min-height: 100vh;
+            position: relative;
         }
 
-        .tab-btn {
-            padding: 14px 28px;
-            background: white;
-            border: 2px solid #e2e8f0;
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 260px;
+            height: 100vh;
+            background: linear-gradient(170deg,#1e1b4b 0%,#312e81 50%,#4338ca 100%);
+            z-index: 1100;
+            transform: translateX(-260px);
+            transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+            box-shadow: 4px 0 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        .sidebar.open { transform: translateX(0); }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1099;
+        }
+        .sidebar-overlay.visible { display: block; }
+
+        .sidebar-header {
+            padding: 22px 20px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            flex-shrink: 0;
+        }
+        .sidebar-logo {
+            font-size: 1.15em;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-close {
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: #fff;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .sidebar-close:hover { background: rgba(255,255,255,0.25); }
+
+        .sidebar-nav {
+            padding: 12px 0;
+            flex: 1;
+        }
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 13px 22px;
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            font-size: 0.95em;
+            font-weight: 500;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .sidebar-nav a:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.1);
+            border-left-color: rgba(255,255,255,0.4);
+        }
+        .sidebar-nav a.active {
+            color: #fff;
+            background: rgba(255,255,255,0.15);
+            border-left-color: #a5f3fc;
+            font-weight: 700;
+        }
+        .sidebar-nav a span.nav-icon { font-size: 1.2em; width: 22px; text-align: center; }
+
+        /* Hamburger button */
+        .hamburger-btn {
+            background: linear-gradient(135deg,#4361ee,#7c3aed);
+            border: none;
+            color: #fff;
+            width: 44px; height: 44px;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            color: #64748b;
-            font-weight: 600;
+            font-size: 1.3em;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 3px 14px rgba(67,97,238,0.45);
+            transition: transform 0.2s;
+            flex-shrink: 0;
         }
+        .hamburger-btn:hover { transform: scale(1.08); }
 
-        .tab-btn:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
+        .tabs { display: none; } /* hide old tab bar */
 
-        .tab-btn.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.2);
-        }
+        .tab-btn { display: none; } /* kept for JS compat, hidden */
 
         .tab-content {
             display: none;
             animation: fadeIn 0.3s ease;
         }
-
-        .tab-content.active {
-            display: block;
-        }
+        .tab-content.active { display: block; }
 
         @keyframes fadeIn {
             from {
@@ -634,6 +713,34 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* ===== PREDICTION MAP ===== */
+        #prediction-map-card {
+            display: none;
+            margin-top: 22px;
+            background: #fff;
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(67,97,238,0.12);
+        }
+        #prediction-map-card h4 {
+            color: #4361ee;
+            margin-bottom: 14px;
+            font-size: 1.05em;
+        }
+        #prediction-map {
+            width: 100%;
+            height: 400px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+            border: none !important;
         }
 
         /* ===== NOTIFICATIONS ===== */
@@ -867,11 +974,21 @@
     <div class="container">
         <!-- Header with Logout -->
         <div class="header">
-            <div class="header-content">
-                <h1>🌳 Future Forest</h1>
-                <p>Forest data prediction using ML</p>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <button class="hamburger-btn" onclick="toggleSidebar()" id="hamburger-btn" title="Menu">☰</button>
+                <div class="header-content">
+                    <h1>🌳 Future Forest</h1>
+                    <p>Forest data prediction using ML</p>
+                </div>
             </div>
             <div class="user-info" id="userInfo">
+                <!-- Notification Bell -->
+                <div style="position:relative;display:inline-block;margin-right:10px;">
+                    <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:42px;height:42px;border-radius:50%;cursor:pointer;font-size:1.3em;position:relative;" title="Notifications">
+                        🔔
+                        <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef476f;color:#fff;font-size:0.6em;font-weight:700;border-radius:50%;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 3px;">0</span>
+                    </button>
+                </div>
                 <div class="user-details">
                     <div class="user-name" id="userName">Loading...</div>
                     <div class="user-email" id="userEmail"></div>
@@ -883,14 +1000,92 @@
             </div>
         </div>
 
+        <!-- Full-screen Notification Overlay -->
+        <div id="notif-overlay" onclick="handleNotifOverlayClick(event)" style="
+            display:none;
+            position:fixed;inset:0;
+            background:rgba(15,23,42,0.55);
+            backdrop-filter:blur(6px);
+            -webkit-backdrop-filter:blur(6px);
+            z-index:9990;
+            align-items:flex-start;
+            justify-content:flex-end;
+            padding:80px 30px 20px 20px;
+            box-sizing:border-box;
+        ">
+            <div id="notif-panel" onclick="event.stopPropagation()" style="
+                width:100%;
+                max-width:440px;
+                max-height:calc(100vh - 110px);
+                background:rgba(255,255,255,0.92);
+                backdrop-filter:blur(20px);
+                -webkit-backdrop-filter:blur(20px);
+                border-radius:22px;
+                box-shadow:0 20px 60px rgba(0,0,0,0.25);
+                border:1px solid rgba(255,255,255,0.6);
+                display:flex;
+                flex-direction:column;
+                overflow:hidden;
+                transform:translateY(-18px) scale(0.97);
+                opacity:0;
+                transition:transform 0.25s cubic-bezier(.34,1.38,.64,1), opacity 0.2s ease;
+            ">
+                <!-- Panel Header -->
+                <div style="padding:18px 20px 14px;background:linear-gradient(135deg,#4361ee,#7c3aed);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="font-size:1.3em;">🔔</span>
+                        <span style="font-weight:800;color:#fff;font-size:1.05em;">Notifications</span>
+                        <span id="notif-count-label" style="background:rgba(255,255,255,0.2);color:#fff;font-size:0.75em;font-weight:700;padding:2px 9px;border-radius:20px;"></span>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <button onclick="markNotifsRead()" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);color:#fff;cursor:pointer;font-size:0.78em;border-radius:20px;padding:5px 13px;font-weight:600;">Mark all read</button>
+                        <button onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.1em;line-height:1;">✕</button>
+                    </div>
+                </div>
+                <!-- Notification List -->
+                <div id="notif-list" style="overflow-y:auto;flex:1;padding:8px 0;">
+                    <div style="text-align:center;padding:36px 16px;">
+                        <div style="font-size:2.5em;">🔔</div>
+                        <p style="color:#94a3b8;margin-top:10px;font-size:0.9em;">No notifications yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🌳 <span>Future Forest</span></div>
+                <button class="sidebar-close" onclick="closeSidebar()">✕</button>
+            </div>
+            <div class="sidebar-nav" id="sidebar-nav">
+                <a class="active" onclick="switchTab('dashboard');closeSidebar()"><span class="nav-icon">🏠</span>Dashboard</a>
+                <a onclick="switchTab('predict');closeSidebar()"><span class="nav-icon">🔮</span>Predictions</a>
+                <a onclick="switchTab('data');closeSidebar()"><span class="nav-icon">📁</span>Data</a>
+                <a onclick="switchTab('visualizations');closeSidebar()"><span class="nav-icon">📊</span>Visualizations</a>
+                <a onclick="switchTab('history');closeSidebar()"><span class="nav-icon">📜</span>History</a>
+                <a onclick="switchTab('compare');closeSidebar()"><span class="nav-icon">⚖️</span>Compare</a>
+                <a onclick="switchTab('analytics');closeSidebar()"><span class="nav-icon">📈</span>Analytics</a>
+                <a onclick="switchTab('favorites');closeSidebar()"><span class="nav-icon">⭐</span>Favorites</a>
+                <a onclick="switchTab('climate');closeSidebar()"><span class="nav-icon">🌡️</span>Climate Risk</a>
+                <a onclick="switchTab('about');closeSidebar()"><span class="nav-icon">ℹ️</span>About</a>
+                <a onclick="switchTab('contact');closeSidebar()"><span class="nav-icon">📧</span>Contact</a>
+            </div>
+        </nav>
+
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
-            <button class="tab-btn" onclick="switchTab('predict')">Make Predictions</button>
-            <button class="tab-btn" onclick="switchTab('data')">View/Upload Data</button>
-            <button class="tab-btn" onclick="switchTab('visualizations')">Visualizations</button>
-            <button class="tab-btn" onclick="switchTab('history')">Prediction History</button>
-            <button class="tab-btn" onclick="switchTab('about')">About</button>
-            <button class="tab-btn" onclick="switchTab('contact')">Contact</button>
+            <button class="tab-btn active" onclick="switchTab('dashboard')">🏠 Dashboard</button>
+            <button class="tab-btn" onclick="switchTab('predict')">🔮 Predictions</button>
+            <button class="tab-btn" onclick="switchTab('data')">📁 Data</button>
+            <button class="tab-btn" onclick="switchTab('visualizations')">📊 Visualizations</button>
+            <button class="tab-btn" onclick="switchTab('history')">📜 History</button>
+            <button class="tab-btn" onclick="switchTab('compare')">⚖️ Compare</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">📈 Analytics</button>
+            <button class="tab-btn" onclick="switchTab('favorites')">⭐ Favorites</button>
+            <button class="tab-btn" onclick="switchTab('climate')">🌡️ Climate Risk</button>
+            <button class="tab-btn" onclick="switchTab('about')">ℹ️ About</button>
+            <button class="tab-btn" onclick="switchTab('contact')">📧 Contact</button>
         </div>
 
         <!-- Dashboard Tab -->
@@ -979,9 +1174,20 @@
                             <label for="prediction-year">Target Year</label>
                             <input type="number" id="prediction-year" min="2000" max="2100" value="2025">
                         </div>
-                        <div style="display: flex; gap: 10px;">
+                        <div class="form-group">
+                            <label for="prediction-model">🤖 ML Model</label>
+                            <select id="prediction-model">
+                                <option value="linear_regression">📏 Linear Regression (Fast)</option>
+                                <option value="polynomial_regression">📐 Polynomial Regression (Non-linear)</option>
+                                <option value="random_forest">🌳 Random Forest (Robust)</option>
+                                <option value="decision_tree">🌿 Decision Tree (Interpretable)</option>
+                                <option value="gradient_boosting">🚀 Gradient Boosting (Accurate)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button onclick="prevStep(2)" class="btn btn-secondary">Previous</button>
                             <button onclick="makePrediction()" class="btn">Make Prediction</button>
+                            <button onclick="compareAllModels()" class="btn" style="background:linear-gradient(135deg,#7c3aed,#4361ee);">⚖️ Compare All Models</button>
                         </div>
                     </div>
 
@@ -998,6 +1204,16 @@
                             <label for="prediction-year-row">Target Year</label>
                             <input type="number" id="prediction-year-row" min="2000" max="2100" value="2025">
                         </div>
+                        <div class="form-group">
+                            <label for="prediction-model-row">🤖 ML Model</label>
+                            <select id="prediction-model-row">
+                                <option value="linear_regression">📏 Linear Regression (Fast)</option>
+                                <option value="polynomial_regression">📐 Polynomial Regression (Non-linear)</option>
+                                <option value="random_forest">🌳 Random Forest (Robust)</option>
+                                <option value="decision_tree">🌿 Decision Tree (Interpretable)</option>
+                                <option value="gradient_boosting">🚀 Gradient Boosting (Accurate)</option>
+                            </select>
+                        </div>
                         <div style="display: flex; gap: 10px;">
                             <button onclick="prevStep(2)" class="btn btn-secondary">Previous</button>
                             <button onclick="makePrediction()" class="btn">Make Prediction</button>
@@ -1008,6 +1224,13 @@
                 <div id="prediction-result" style="margin-top: 20px;"></div>
                 <div id="prediction-new-btn-row" style="display:none; margin-top:12px;">
                     <button onclick="resetPredictionSteps(); document.getElementById('prediction-new-btn-row').style.display='none';" class="btn" style="background:linear-gradient(135deg,#06d6a0,#118ab2);">🔄 New Prediction</button>
+                </div>
+
+                <!-- Prediction Map -->
+                <div id="prediction-map-card">
+                    <h4>🗺️ Prediction Map</h4>
+                    <div id="prediction-map-legend" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:0.84em;"></div>
+                    <div id="prediction-map"></div>
                 </div>
             </div>
         </div>
@@ -1057,6 +1280,22 @@
                             <!-- Data will be loaded here -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Global Library Section -->
+            <div class="card" style="margin-top:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <h3 style="margin:0">🌐 Global Library Datasets</h3>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                        <span style="font-size:0.9em;color:#64748b;">Show Global Data</span>
+                        <div id="glib-toggle-wrapper" onclick="toggleGlobalLibrary()" style="width:48px;height:26px;background:#cbd5e1;border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;">
+                            <div id="glib-toggle-knob" style="position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.2);"></div>
+                        </div>
+                    </label>
+                </div>
+                <div id="glib-user-container">
+                    <p style="color:#94a3b8;font-size:0.9em;">Enable the toggle above to browse datasets shared by admin.</p>
                 </div>
             </div>
         </div>
@@ -1190,6 +1429,34 @@
                 font-family: 'Font Awesome 6 Free';
                 font-weight: 900;
             }
+
+            /* ── Chat Widget ── */
+            .chat-msg { padding:10px 14px; border-radius:14px; font-size:0.88em; max-width:90%; line-height:1.5; }
+            .chat-msg.user { background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff; align-self:flex-end; }
+            .chat-msg.assistant { background:#f1f5f9; color:#334155; align-self:flex-start; white-space:pre-wrap; }
+            #chat-bubble:hover { transform:scale(1.1); }
+
+            /* ── Risk Score Gauge ── */
+            .risk-gauge { display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px; border-radius:16px; }
+            .risk-score-circle { width:120px; height:120px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2em; font-weight:700; color:#fff; flex-direction:column; }
+            .risk-score-circle small { font-size:0.35em; font-weight:400; }
+
+            /* ── Model compare bars ── */
+            .model-bar-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+            .model-bar-label { width:160px; font-size:0.9em; color:#334155; }
+            .model-bar-track { flex:1; background:#f1f5f9; border-radius:8px; height:22px; overflow:hidden; }
+            .model-bar-fill { height:100%; border-radius:8px; display:flex; align-items:center; padding-left:8px; font-size:0.8em; color:#fff; font-weight:600; transition:width 0.8s ease; }
+
+            /* ── Favorites ── */
+            .fav-card { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; background:#f8faff; border-radius:12px; margin-bottom:10px; border:1px solid rgba(67,97,238,0.1); }
+            .fav-label { display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.8em; font-weight:600; }
+            .fav-label.favorite { background:#fef9c3; color:#a16207; }
+            .fav-label.primary { background:#dcfce7; color:#166534; }
+            .fav-label.archived { background:#f1f5f9; color:#64748b; }
+
+            /* ── Insight cards ── */
+            .insight-item { padding:12px 16px; border-radius:10px; margin-bottom:10px; background:#f8faff; border-left:4px solid #4361ee; font-size:0.92em; color:#334155; }
+            .rec-item { padding:10px 14px; border-radius:10px; margin-bottom:8px; background:#f0fdf4; border-left:4px solid #06d6a0; font-size:0.9em; color:#15803d; }
         </style>
 
         <!-- Visualizations Tab -->
@@ -1611,6 +1878,292 @@
             </div>
         </div>
 
+        <!-- ======================================================
+             COMPARE TAB
+             ====================================================== -->
+        <div id="compare" class="tab-content">
+            <div class="card">
+                <h3>⚖️ Country / Region Comparison</h3>
+                <p style="color:#64748b; margin-bottom:20px;">Select two countries or regions and compare their environmental metrics side by side.</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; flex-wrap:wrap;">
+                    <div class="form-group">
+                        <label>Dataset</label>
+                        <select id="cmp-dataset"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Region Column</label>
+                        <select id="cmp-region-col"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Metrics (auto-detected)</label>
+                        <select id="cmp-metric-col" multiple style="height:80px;"></select>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px;">
+                    <div class="form-group">
+                        <label>Region A</label>
+                        <select id="cmp-region-a"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Region B</label>
+                        <select id="cmp-region-b"></select>
+                    </div>
+                </div>
+                <button onclick="runRegionComparison()" class="btn" style="margin-top:10px;">⚖️ Compare Regions</button>
+                <div id="compare-result" style="margin-top:20px;"></div>
+                <canvas id="compareChart" height="120" style="margin-top:20px; display:none;"></canvas>
+            </div>
+        </div>
+
+        <!-- ======================================================
+             ANALYTICS TAB
+             ====================================================== -->
+        <div id="analytics" class="tab-content">
+            <div class="card">
+                <h3>📈 Prediction Analytics</h3>
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button onclick="loadAnalytics()" class="btn">🔄 Refresh Analytics</button>
+                    <a id="export-csv-btn" href="/api/export-predictions?format=csv" class="btn" style="background:linear-gradient(135deg,#06d6a0,#118ab2);" download>⬇️ Export CSV</a>
+                    <a id="export-excel-btn" href="/api/export-predictions?format=excel" class="btn" style="background:linear-gradient(135deg,#ff9e00,#ef476f);" download>⬇️ Export Excel</a>
+                </div>
+                <div id="analytics-summary" class="stats-grid" style="margin-bottom:20px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                    <div class="card" style="padding:15px;">
+                        <h4 style="color:#4361ee;">Accuracy Over Time</h4>
+                        <div style="position:relative;height:220px;"><canvas id="analyticsAccuracyChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding:15px;">
+                        <h4 style="color:#06d6a0;">Model Distribution</h4>
+                        <div style="position:relative;height:220px;"><canvas id="analyticsModelChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding:15px;">
+                        <h4 style="color:#7c3aed;">Top Metrics Predicted</h4>
+                        <div style="position:relative;height:220px;"><canvas id="analyticsMetricsChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding:15px;">
+                        <h4 style="color:#ff9e00;">Accuracy Distribution</h4>
+                        <div style="position:relative;height:220px;"><canvas id="analyticsAccDistChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================
+             FAVORITES TAB
+             ====================================================== -->
+        <div id="favorites" class="tab-content">
+            <div class="card">
+                <h3>⭐ Favorites & Saved Datasets</h3>
+                <div style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap;">
+                    <button onclick="loadFavorites()" class="btn">🔄 Refresh</button>
+                </div>
+                <div style="margin-bottom:20px; padding:15px; background:rgba(67,97,238,0.07); border-radius:12px;">
+                    <h4 style="margin-bottom:10px;">➕ Add / Update Favorite</h4>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="form-group" style="flex:2; min-width:150px;">
+                            <label>Dataset Name</label>
+                            <select id="fav-dataset-select"></select>
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:120px;">
+                            <label>Label</label>
+                            <select id="fav-label">
+                                <option value="favorite">⭐ Favorite</option>
+                                <option value="primary">🎯 Primary</option>
+                                <option value="archived">📦 Archived</option>
+                            </select>
+                        </div>
+                        <button onclick="saveFavorite()" class="btn" style="margin-bottom:6px;">Save</button>
+                    </div>
+                </div>
+                <div id="favorites-list"></div>
+            </div>
+        </div>
+
+        <!-- ======================================================
+             CLIMATE RISK TAB
+             ====================================================== -->
+        <div id="climate" class="tab-content">
+            <div class="card">
+                <h3>🌡️ Climate Risk Prediction</h3>
+                <p style="color:#64748b; margin-bottom:20px;">Assess future deforestation + climate risk based on dataset trends projected to a horizon year.</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; flex-wrap:wrap;">
+                    <div class="form-group">
+                        <label>Dataset</label>
+                        <select id="climate-dataset"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Country / Filter Column</label>
+                        <select id="climate-filter-col"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Country / Filter Value</label>
+                        <select id="climate-filter-val"></select>
+                    </div>
+                </div>
+                <div class="form-group" style="max-width:200px;">
+                    <label>Horizon Year</label>
+                    <input type="number" id="climate-year" value="2050" min="2025" max="2100">
+                </div>
+                <button onclick="runClimateRisk()" class="btn" style="background:linear-gradient(135deg,#ef476f,#ff9e00);">🌡️ Assess Climate Risk</button>
+                <div id="climate-result" style="margin-top:25px;"></div>
+            </div>
+
+            <!-- Dataset Cleaning Card -->
+            <div class="card" style="margin-top:20px;">
+                <h3>🧹 Dataset Cleaning Tools</h3>
+                <p style="color:#64748b; margin-bottom:15px;">Clean and preprocess your dataset to improve prediction accuracy.</p>
+                <div class="form-group">
+                    <label>Select Dataset to Clean</label>
+                    <select id="clean-dataset-select"></select>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:15px;">
+                    <button onclick="runCleanOp('remove_nulls')" class="btn" style="background:linear-gradient(135deg,#ef476f,#c77dff);">🗑️ Remove Null Rows</button>
+                    <button onclick="runCleanOp('remove_duplicates')" class="btn" style="background:linear-gradient(135deg,#ff9e00,#ef476f);">✂️ Remove Duplicates</button>
+                    <button onclick="runCleanOp('fill_nulls_mean')" class="btn" style="background:linear-gradient(135deg,#06d6a0,#118ab2);">📊 Fill Nulls (Mean)</button>
+                    <button onclick="runCleanOp('fill_nulls_median')" class="btn" style="background:linear-gradient(135deg,#7c3aed,#4361ee);">📊 Fill Nulls (Median)</button>
+                    <button onclick="openNormalizeModal()" class="btn" style="background:linear-gradient(135deg,#4361ee,#06d6a0);">📐 Normalize Columns</button>
+                </div>
+                <div id="clean-result"></div>
+            </div>
+
+            <!-- Submit for Approval Card -->
+            <div class="card" style="margin-top:20px;">
+                <h3>📤 Submit Dataset for Public Approval</h3>
+                <p style="color:#64748b; margin-bottom:15px;">Submit a dataset to the admin for review and inclusion in the Global Dataset Library.</p>
+                <div style="display:flex; gap:10px; align-items:flex-end;">
+                    <div class="form-group" style="flex:2;">
+                        <label>Select Dataset</label>
+                        <select id="approval-dataset-select"></select>
+                    </div>
+                    <button onclick="submitForApproval()" class="btn" style="margin-bottom:6px; background:linear-gradient(135deg,#06d6a0,#4361ee);">📤 Submit for Approval</button>
+                </div>
+                <div id="approval-result" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- ======================================================
+             FLOATING AI CHAT WIDGET
+             ====================================================== -->
+        <div id="chat-widget" style="position:fixed; bottom:24px; right:24px; z-index:9999;">
+            <div id="chat-bubble" onclick="toggleChat()" style="
+                width:56px; height:56px; background:linear-gradient(135deg,#4361ee,#7c3aed);
+                border-radius:50%; display:flex; align-items:center; justify-content:center;
+                cursor:pointer; box-shadow:0 4px 20px rgba(67,97,238,0.5);
+                font-size:1.6em; transition:transform 0.2s;">🤖</div>
+            <div id="chat-panel" style="
+                display:none; position:absolute; bottom:70px; right:0;
+                width:340px; background:#fff; border-radius:16px;
+                box-shadow:0 8px 40px rgba(0,0,0,0.18); overflow:hidden;
+                border:1px solid rgba(67,97,238,0.2);">
+                <div style="background:linear-gradient(135deg,#4361ee,#7c3aed); padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#fff; font-weight:700; font-size:1.05em;">🌲 Forest AI Assistant</span>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="clearChat()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8em;">🗑️ Clear</button>
+                        <button onclick="toggleChat()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer;">✕</button>
+                    </div>
+                </div>
+                <div id="chat-messages" style="height:280px; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
+                    <div class="chat-msg assistant">👋 Hello! I'm Forest AI. Ask me anything about forests, climate, or how to use this app!</div>
+                </div>
+                <div style="padding:12px; border-top:1px solid #f0f0f0; display:flex; gap:8px;">
+                    <input type="text" id="chat-input" placeholder="Ask me anything..." 
+                        style="flex:1; padding:10px 14px; border:1px solid #e2e8f0; border-radius:20px; font-size:0.9em;"
+                        onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" style="background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff; border:none; border-radius:50%; width:40px; height:40px; cursor:pointer; font-size:1.1em;">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Floating Button -->
+        <div id="support-widget" style="position:fixed; bottom:94px; right:24px; z-index:9998;">
+            <button onclick="toggleSupport()" style="
+                width:50px; height:50px; background:linear-gradient(135deg,#ef476f,#ff9e00);
+                border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
+                cursor:pointer; box-shadow:0 4px 18px rgba(239,71,111,0.45);
+                font-size:1.4em; transition:transform 0.2s;" title="Support">🎧</button>
+        </div>
+
+        <!-- Support Modal -->
+        <div id="support-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10010;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:18px;padding:0;max-width:480px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,0.2);overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#ef476f,#ff9e00);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#fff;font-weight:700;font-size:1.1em;">🎧 Support</span>
+                    <button onclick="toggleSupport()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;">✕</button>
+                </div>
+                <!-- Tabs -->
+                <div style="display:flex;border-bottom:2px solid #f0f0f0;">
+                    <button id="support-tab-new" onclick="switchSupportTab('new')" style="flex:1;padding:12px;border:none;background:#4361ee;color:#fff;cursor:pointer;font-weight:600;font-size:0.95em;">New Query</button>
+                    <button id="support-tab-my" onclick="switchSupportTab('my')" style="flex:1;padding:12px;border:none;background:#94a3b8;color:#fff;cursor:pointer;font-weight:600;font-size:0.95em;">My Queries</button>
+                </div>
+                <!-- New Query Tab -->
+                <div id="support-new-panel" style="padding:22px;">
+                    <p style="color:#64748b;font-size:0.9em;margin-bottom:16px;">Report issues or request assistance from our technical team</p>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">Select Issue Type *</label>
+                        <select id="support-issue-type" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:0.95em;">
+                            <option value="">Select Issue Type *</option>
+                            <option value="Bug Report">Bug Report</option>
+                            <option value="Feature Request">Feature Request</option>
+                            <option value="Data Issue">Data Issue</option>
+                            <option value="Prediction Error">Prediction Error</option>
+                            <option value="Account Issue">Account Issue</option>
+                            <option value="General">General</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <textarea id="support-description" placeholder="Description (Optional)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:0.9em;height:90px;resize:vertical;"></textarea>
+                    </div>
+                    <div style="margin-bottom:14px;">
+                        <label for="support-screenshot" style="display:block;width:100%;padding:11px;border:2px solid #06d6a0;border-radius:10px;text-align:center;cursor:pointer;color:#06d6a0;font-weight:600;font-size:0.9em;">📷 Upload Screenshot</label>
+                        <input type="file" id="support-screenshot" accept="image/*" style="display:none;" onchange="previewSupportScreenshot(this)">
+                        <div id="support-screenshot-preview" style="margin-top:8px;"></div>
+                    </div>
+                    <button onclick="submitSupportQuery()" style="width:100%;background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;border:none;padding:12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:1em;">Submit</button>
+                    <div id="support-submit-result" style="margin-top:10px;"></div>
+                </div>
+                <!-- My Queries Tab -->
+                <div id="support-my-panel" style="display:none;padding:18px;">
+                    <div id="support-my-list"><p style="text-align:center;color:#94a3b8;padding:20px;">Loading your queries...</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Normalize Modal -->
+        <div id="normalize-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:16px; padding:25px; max-width:480px; width:90%; max-height:80vh; overflow-y:auto;">
+                <h3 style="margin-bottom:15px;">📐 Normalize Columns</h3>
+                <p style="color:#64748b; margin-bottom:15px;">Select columns to normalize (scale to 0–1 range).</p>
+                <div id="normalize-col-list" style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto;"></div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button onclick="runNormalizeSelected()" class="btn">Apply Normalization</button>
+                    <button onclick="closeNormalizeModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Insights Modal -->
+        <div id="insights-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:16px; padding:25px; max-width:560px; width:93%; max-height:80vh; overflow-y:auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3>🤖 AI Insights</h3>
+                    <button onclick="closeInsightsModal()" style="background:none; border:none; font-size:1.4em; cursor:pointer;">✕</button>
+                </div>
+                <div id="insights-body"></div>
+            </div>
+        </div>
+
+        <!-- Model Comparison Modal -->
+        <div id="model-compare-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10000; align-items:center; justify-content:center;">
+            <div style="background:#fff; border-radius:16px; padding:25px; max-width:640px; width:95%; max-height:85vh; overflow-y:auto;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3>⚖️ Model Comparison</h3>
+                    <button onclick="closeModelCompareModal()" style="background:none; border:none; font-size:1.4em; cursor:pointer;">✕</button>
+                </div>
+                <div id="model-compare-body"></div>
+                <canvas id="modelCompareChart" height="120" style="margin-top:20px;"></canvas>
+            </div>
+        </div>
+
         <!-- Add Font Awesome for icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -1808,7 +2361,8 @@
                         return;
                     }
 
-                    datasets = await response.json();
+                    const _dsResp = await response.json();
+                    datasets = Array.isArray(_dsResp) ? _dsResp : (_dsResp.datasets || []);
                     console.log(`Received ${datasets.length} datasets:`, datasets);
 
                     // Populate dataset select elements
@@ -1854,6 +2408,9 @@
 
                     // Also populate datasets management
                     updateDatasetsManagement();
+
+                    // Merge Global Library datasets into prediction/chart dropdowns (if enabled)
+                    await mergeGlobalDatasetsIntoSelects();
 
                     if (datasets.length > 0) {
                         showNotification(`Loaded ${datasets.length} datasets`, 'success');
@@ -2106,11 +2663,12 @@
                         // Clear existing options
                         columnSelect.innerHTML = '<option value="">-- Select Column --</option>';
 
-                        // Add column options
+                        // Add column options — handle both plain strings and {column_name, is_numeric} objects
                         result.columns.forEach(column => {
+                            const colName = (typeof column === 'object' && column !== null) ? column.column_name : column;
                             const option = document.createElement('option');
-                            option.value = column;
-                            option.textContent = column;
+                            option.value = colName;
+                            option.textContent = colName;
                             columnSelect.appendChild(option);
                         });
 
@@ -2158,16 +2716,17 @@
                         xAxisSelect.innerHTML = '<option value="">-- Select X-Axis --</option>';
                         yAxisSelect.innerHTML = '<option value="">-- Select Y-Axis --</option>';
 
-                        // Add options to both selects
+                        // Add options to both selects — handle both plain strings and {column_name} objects
                         result.columns.forEach(column => {
+                            const colName = (typeof column === 'object' && column !== null) ? column.column_name : column;
                             const optionX = document.createElement('option');
-                            optionX.value = column;
-                            optionX.textContent = column;
+                            optionX.value = colName;
+                            optionX.textContent = colName;
                             xAxisSelect.appendChild(optionX);
 
                             const optionY = document.createElement('option');
-                            optionY.value = column;
-                            optionY.textContent = column;
+                            optionY.value = colName;
+                            optionY.textContent = colName;
                             yAxisSelect.appendChild(optionY);
                         });
 
@@ -2823,17 +3382,18 @@
                     const result = await response.json();
                     if (result.success && result.columns) {
                         predictionAllColumns = result.columns;
-                        // Populate column-wise select
                         const colSelect = document.getElementById('prediction-column');
                         colSelect.innerHTML = '<option value="">-- Select Column --</option>';
+                        // Handle both plain strings and {column_name, is_numeric} objects
                         result.columns.forEach(col => {
+                            const colName = (typeof col === 'object' && col !== null) ? col.column_name : col;
+                            const isNum = (typeof col === 'object' && col !== null) ? col.is_numeric : true;
+                            if (!colName || colName.toLowerCase() === 'year') return; // skip Year from metric selector
                             const opt = document.createElement('option');
-                            opt.value = col;
-                            opt.textContent = col;
+                            opt.value = colName;
+                            opt.textContent = colName + (isNum ? '' : ' (text)');
                             colSelect.appendChild(opt);
                         });
-                        // Also populate row-column select (excluding identifier col)
-                        // Will be refreshed when row identifier is loaded
                     }
                 } catch (e) {
                     console.error('Error loading columns:', e);
@@ -3493,7 +4053,1511 @@
         }
     `;
             document.head.appendChild(style);
+
+            // ─────────────────────────────────────────────────────────────
+            // NEW FEATURE JAVASCRIPT
+            // ─────────────────────────────────────────────────────────────
+
+            // ── Populate dataset selectors when switching to new tabs ──
+            const NEW_TAB_SELECTORS = {
+                compare:   () => populateSelectFromDatasets(['cmp-dataset','cmp-region-col-source'], 'cmp-dataset'),
+                analytics: () => loadAnalytics(),
+                favorites: () => { loadFavorites(); populateSelectFromDatasets([],'fav-dataset-select'); },
+                climate:   () => populateSelectFromDatasets([], 'climate-dataset; climate-filter-col'),
+            };
+
+            function populateNewTabSelects(tabName) {
+                if (tabName === 'compare') {
+                    loadDatasetSelectOptions('cmp-dataset', () => onCmpDatasetChange());
+                } else if (tabName === 'favorites') {
+                    loadDatasetSelectOptions('fav-dataset-select');
+                    loadDatasetSelectOptions('approval-dataset-select');
+                    loadFavorites();
+                } else if (tabName === 'analytics') {
+                    loadAnalytics();
+                } else if (tabName === 'climate') {
+                    loadDatasetSelectOptions('climate-dataset', () => onClimateDatasetChange());
+                    loadDatasetSelectOptions('clean-dataset-select');
+                    loadDatasetSelectOptions('approval-dataset-select');
+                }
+            }
+
+            // Patch switchTab: update sidebar active state + populate tab selects
+            const _origSwitchTab = switchTab;
+            switchTab = function(tabName) {
+                if (_origSwitchTab) _origSwitchTab(tabName);
+                populateNewTabSelects(tabName);
+                // Update sidebar active link
+                document.querySelectorAll('#sidebar-nav a').forEach(a => a.classList.remove('active'));
+                document.querySelectorAll('#sidebar-nav a').forEach(a => {
+                    if ((tabName === 'dashboard' && a.textContent.includes('Dashboard')) ||
+                        (tabName === 'predict' && a.textContent.includes('Prediction')) ||
+                        (tabName === 'data' && a.textContent.includes('Data')) ||
+                        (tabName === 'visualizations' && a.textContent.includes('Visual')) ||
+                        (tabName === 'history' && a.textContent.includes('History')) ||
+                        (tabName === 'compare' && a.textContent.includes('Compare')) ||
+                        (tabName === 'analytics' && a.textContent.includes('Analytics')) ||
+                        (tabName === 'favorites' && a.textContent.includes('Favorites')) ||
+                        (tabName === 'climate' && a.textContent.includes('Climate')) ||
+                        (tabName === 'about' && a.textContent.includes('About')) ||
+                        (tabName === 'contact' && a.textContent.includes('Contact'))
+                    ) { a.classList.add('active'); }
+                });
+            };
+
+            async function loadDatasetSelectOptions(selectId, onChange) {
+                try {
+                    const r = await fetch('/api/datasets');
+                    const raw = await r.json();
+                    // API returns {datasets:[...]} or plain array (legacy)
+                    const list = Array.isArray(raw) ? raw : (raw.datasets || []);
+                    const sel = document.getElementById(selectId);
+                    if (!sel) return;
+                    sel.innerHTML = '<option value="">-- Select Dataset --</option>';
+                    list.forEach(d => {
+                        const opt = new Option(d.name + (d.row_count ? ` (${d.row_count} rows)` : ''), d.name);
+                        sel.appendChild(opt);
+                    });
+                    if (list.length > 0) sel.selectedIndex = 1; // auto-select first real dataset
+                    if (onChange) { sel.onchange = onChange; onChange(); }
+                } catch(e) { console.error('loadDatasetSelectOptions', e); }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // MULTI-MODEL: Compare All Models
+            // ─────────────────────────────────────────────────────────────
+            let _modelCompareChart = null;
+            async function compareAllModels() {
+                const dataset = document.getElementById('prediction-dataset')?.value;
+                const metric  = document.getElementById('prediction-column')?.value;
+                const year    = parseInt(document.getElementById('prediction-year')?.value || 2030);
+                const filterCol = document.getElementById('prediction-filter-col')?.value || null;
+                const filterVal = document.getElementById('prediction-filter-val')?.value || null;
+
+                if (!dataset || !metric) {
+                    showNotification('Please select a dataset and metric first.', 'error');
+                    return;
+                }
+
+                const body = document.getElementById('model-compare-body');
+                body.innerHTML = '<div style="text-align:center;padding:30px;">⏳ Running all models...</div>';
+                document.getElementById('model-compare-modal').style.display = 'flex';
+
+                try {
+                    const r = await fetch('/api/predict/compare-models', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ dataset, metric, target_year: year,
+                                               filter_column: filterCol, filter_value: filterVal })
+                    });
+                    const data = await r.json();
+                    if (!data.success) { body.innerHTML = `<p style="color:red;">${data.message}</p>`; return; }
+
+                    const results = data.results || [];
+                    const best = data.best_model;
+                    const colors = {
+                        'linear_regression':'#4361ee','polynomial_regression':'#7c3aed',
+                        'random_forest':'#06d6a0','decision_tree':'#ff9e00','gradient_boosting':'#ef476f'
+                    };
+
+                    body.innerHTML = `
+                        <p style="color:#64748b;margin-bottom:15px;">Comparing all models for <strong>${data.metric}</strong> → Year <strong>${data.year}</strong></p>
+                        <div class="model-bar-row" style="font-weight:700; color:#4361ee; margin-bottom:5px;">
+                            <div class="model-bar-label">Model</div>
+                            <div style="flex:1;">Accuracy %</div>
+                            <div style="width:90px; text-align:right;">Predicted</div>
+                        </div>
+                        ${results.map(r => `
+                        <div class="model-bar-row" style="${r.model===best?'background:#f0fdf4;border-radius:10px;padding:5px 8px;':''}">
+                            <div class="model-bar-label">${r.model===best?'🏆 ':''}<strong>${r.label}</strong></div>
+                            <div class="model-bar-track">
+                                <div class="model-bar-fill" style="width:${Math.min(r.accuracy||0,100)}%;background:${colors[r.model]||'#4361ee'};">
+                                    ${(r.accuracy||0).toFixed(1)}%
+                                </div>
+                            </div>
+                            <div style="width:90px; text-align:right; font-size:0.85em; color:#334155;">${r.prediction!=null?r.prediction.toFixed(3):'-'}</div>
+                        </div>`).join('')}
+                        <p style="margin-top:15px; color:#06d6a0; font-weight:600;">🏆 Best Model: ${best.replace(/_/g,' ').toUpperCase()}</p>
+                    `;
+
+                    // Chart
+                    const ctx = document.getElementById('modelCompareChart').getContext('2d');
+                    if (_modelCompareChart) _modelCompareChart.destroy();
+                    _modelCompareChart = new Chart(ctx, {
+                        type:'bar',
+                        data:{
+                            labels: results.map(r=>r.label),
+                            datasets:[{
+                                label:'Accuracy %',
+                                data: results.map(r=>r.accuracy||0),
+                                backgroundColor: results.map(r=>colors[r.model]||'#4361ee'),
+                                borderRadius:8
+                            }]
+                        },
+                        options:{responsive:true, plugins:{legend:{display:false}},
+                                 scales:{y:{min:0,max:100}}}
+                    });
+
+                } catch(e) {
+                    body.innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+                }
+            }
+            function closeModelCompareModal() {
+                document.getElementById('model-compare-modal').style.display = 'none';
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // PREDICTION: pass model to backend
+            // ─────────────────────────────────────────────────────────────
+            const _origMakePrediction = makePrediction;
+            makePrediction = async function() {
+                const dataset = document.getElementById('prediction-dataset')?.value;
+                if (!dataset) { showNotification('Please select a dataset.', 'error'); return; }
+
+                // Use the real predictionMode variable set by selectPredictionMode()
+                const mode = (typeof predictionMode !== 'undefined' && predictionMode) ? predictionMode : 'column';
+                let metric = null, year = null, filterCol = null, filterVal = null;
+                let modelName = 'linear_regression';
+
+                if (mode === 'row') {
+                    filterVal = document.getElementById('prediction-row')?.value;
+                    // Use the actual identifier column detected by loadRowIdentifiers()
+                    filterCol = (typeof predictionRowIdentifierCol !== 'undefined' && predictionRowIdentifierCol)
+                                ? predictionRowIdentifierCol : null;
+                    year = parseInt(document.getElementById('prediction-year-row')?.value || 2030);
+                    modelName = document.getElementById('prediction-model-row')?.value || 'linear_regression';
+                } else {
+                    metric   = document.getElementById('prediction-column')?.value;
+                    year     = parseInt(document.getElementById('prediction-year')?.value || 2030);
+                    modelName = document.getElementById('prediction-model')?.value || 'linear_regression';
+                }
+
+                const resultDiv = document.getElementById('prediction-result');
+                resultDiv.innerHTML = '<div style="text-align:center;padding:20px;">⏳ Running prediction...</div>';
+
+                try {
+                    const payload = { dataset, target_year: year, model: modelName };
+                    if (mode === 'column' && metric) payload.metric = metric;
+                    if (mode === 'row' && filterCol && filterVal) {
+                        payload.filter_column = filterCol;
+                        payload.filter_value  = filterVal;
+                    }
+
+                    const r = await fetch('/api/predict', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await r.json();
+
+                    if (data.success) {
+                        document.getElementById('prediction-new-btn-row').style.display = 'block';
+                        if (data.row_wise) {
+                            resultDiv.innerHTML = renderRowWiseResult(data);
+                        } else {
+                            resultDiv.innerHTML = renderColumnWiseResult(data, modelName);
+                        }
+                        // Show prediction map
+                        showPredictionMap({ ...data, dataset, metric, year });
+                        // Auto-show insights for column-wise
+                        if (!data.row_wise && data.prediction != null) {
+                            await showInsightsModal({
+                                metric: data.metric, year: data.year,
+                                value: data.prediction, accuracy: data.accuracy,
+                                dataset, model: modelName
+                            });
+                        }
+                    } else {
+                        resultDiv.innerHTML = `<div style="background:#fee2e2;padding:16px;border-radius:12px;color:#dc2626;">❌ ${data.message}</div>`;
+                    }
+                } catch(e) {
+                    resultDiv.innerHTML = `<div style="background:#fee2e2;padding:16px;border-radius:12px;color:#dc2626;">❌ ${e.message}</div>`;
+                }
+            };
+
+            function renderColumnWiseResult(data, modelName) {
+                const acc = ((data.accuracy||0)*100).toFixed(1);
+                const accColor = acc>=80?'#06d6a0':acc>=60?'#ff9e00':'#ef476f';
+                return `
+                    <div style="background:linear-gradient(135deg,rgba(67,97,238,0.07),rgba(6,214,160,0.07));padding:25px;border-radius:16px;border:1px solid rgba(67,97,238,0.15);">
+                        <h4 style="color:#4361ee;margin-bottom:15px;">🎯 Prediction Result</h4>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:15px;">
+                            <div style="text-align:center;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+                                <div style="font-size:1.8em;font-weight:700;color:#4361ee;">${(data.prediction||0).toFixed(3)}</div>
+                                <div style="color:#64748b;font-size:0.85em;">${data.metric||'Predicted Value'}</div>
+                            </div>
+                            <div style="text-align:center;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+                                <div style="font-size:1.8em;font-weight:700;color:${accColor};">${acc}%</div>
+                                <div style="color:#64748b;font-size:0.85em;">Model Accuracy</div>
+                            </div>
+                            <div style="text-align:center;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+                                <div style="font-size:1.4em;font-weight:700;color:#7c3aed;">${data.year}</div>
+                                <div style="color:#64748b;font-size:0.85em;">Target Year</div>
+                            </div>
+                            <div style="text-align:center;padding:15px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);">
+                                <div style="font-size:0.95em;font-weight:700;color:#334155;">${(modelName||'linear_regression').replace(/_/g,' ')}</div>
+                                <div style="color:#64748b;font-size:0.85em;">Model Used</div>
+                            </div>
+                        </div>
+                        ${data.data_points?`<p style="margin-top:12px;color:#64748b;font-size:0.85em;">Based on ${data.data_points} data points.</p>`:''}
+                    </div>`;
+            }
+
+            function renderRowWiseResult(data) {
+                const preds = data.predictions || [];
+                if (!preds.length) return '<p style="color:#dc2626;">No predictions returned.</p>';
+                return `
+                    <div style="background:#f8faff;padding:20px;border-radius:16px;border:1px solid rgba(67,97,238,0.15);">
+                        <h4 style="color:#4361ee;margin-bottom:15px;">📊 Row-wise Predictions for ${data.filter_value||''} in ${data.year}</h4>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead><tr style="background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;">
+                                <th style="padding:10px 14px;text-align:left;border-radius:8px 0 0 0;">Metric</th>
+                                <th style="padding:10px 14px;text-align:right;">Predicted</th>
+                                <th style="padding:10px 14px;text-align:right;">Accuracy</th>
+                            </tr></thead>
+                            <tbody>${preds.map((p,i)=>`
+                                <tr style="background:${i%2?'#f1f5f9':'#fff'};">
+                                    <td style="padding:10px 14px;">${p.metric}</td>
+                                    <td style="padding:10px 14px;text-align:right;font-weight:600;color:#4361ee;">${(p.prediction||0).toFixed(4)}</td>
+                                    <td style="padding:10px 14px;text-align:right;color:${((p.accuracy||0)*100)>=70?'#06d6a0':'#ff9e00'};">${((p.accuracy||0)*100).toFixed(1)}%</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table></div>
+                    </div>`;
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // SIDEBAR NAVIGATION
+            // ─────────────────────────────────────────────────────────────
+            function toggleSidebar() {
+                const sb = document.getElementById('sidebar');
+                const ov = document.getElementById('sidebar-overlay');
+                const isOpen = sb.classList.contains('open');
+                if (isOpen) closeSidebar();
+                else {
+                    sb.classList.add('open');
+                    ov.classList.add('visible');
+                }
+            }
+            function closeSidebar() {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebar-overlay').classList.remove('visible');
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // PREDICTION MAP  (Leaflet)
+            // ─────────────────────────────────────────────────────────────
+            let _predMap = null;
+            let _predMapMarkers = [];
+
+            // ── Level 3: Country / major region → [lat, lon] ──
+            const REGION_COORDS = {
+                'india':[20.6,78.9],'china':[35.9,104.2],'indonesia':[-0.8,113.9],
+                'malaysia':[4.2,108.0],'myanmar':[19.2,96.7],'thailand':[15.9,100.9],
+                'vietnam':[14.1,108.3],'philippines':[12.9,121.8],'bangladesh':[23.7,90.4],
+                'sri lanka':[7.9,80.8],'nepal':[28.4,84.1],'pakistan':[30.4,69.3],
+                'brazil':[-14.2,-51.9],'amazon':[-3.5,-62.0],'congo':[-2.9,23.7],
+                'd.r. congo':[-2.9,23.7],'drc':[-2.9,23.7],'nigeria':[9.1,8.7],
+                'ethiopia':[9.1,40.5],'kenya':[-0.0,37.9],'tanzania':[-6.4,34.9],
+                'cameroon':[5.7,12.4],'ghana':[7.9,-1.0],'south africa':[-30.6,22.9],
+                'mozambique':[-18.7,35.5],'madagascar':[-18.8,46.9],'angola':[-11.2,17.9],
+                'zambia':[-13.1,27.9],'ivory coast':[7.5,-5.5],'morocco':[31.8,-7.1],
+                'canada':[56.1,-106.3],'usa':[37.1,-95.7],'united states':[37.1,-95.7],
+                'mexico':[23.6,-102.6],'argentina':[-38.4,-63.6],'peru':[-9.2,-75.0],
+                'colombia':[4.6,-74.3],'bolivia':[-16.3,-63.6],'venezuela':[8.0,-66.2],
+                'ecuador':[-1.8,-78.2],'chile':[-35.7,-71.5],'guyana':[4.9,-59.0],
+                'russia':[61.5,105.3],'germany':[51.2,10.5],'france':[46.2,2.2],
+                'sweden':[60.1,18.6],'finland':[64.1,25.7],'norway':[60.5,8.5],
+                'spain':[40.5,-3.7],'portugal':[39.4,-8.2],'romania':[45.9,24.9],
+                'ukraine':[49.0,32.0],'poland':[52.1,19.4],'belarus':[53.7,27.9],
+                'australia':[-25.3,133.8],'new zealand':[-40.9,174.9],
+                'papua new guinea':[-6.3,143.9],'japan':[36.2,138.3],
+                'global':[20.0,0.0],'world':[20.0,0.0],'international':[20.0,0.0],
+            };
+
+            // ── Level 2: State / Province / Territory → [lat, lon, zoom] ──
+            const STATE_COORDS = {
+                // India States & UTs
+                'andhra pradesh':[15.9,79.7,6],'arunachal pradesh':[28.2,94.7,6],
+                'assam':[26.2,92.9,6],'bihar':[25.1,85.3,6],'chhattisgarh':[21.3,81.9,6],
+                'goa':[15.3,74.1,8],'gujarat':[22.3,71.2,6],'haryana':[29.1,76.1,7],
+                'himachal pradesh':[31.1,77.2,7],'jharkhand':[23.6,85.3,7],
+                'karnataka':[15.3,75.7,6],'kerala':[10.9,76.3,7],
+                'madhya pradesh':[22.5,77.5,6],'maharashtra':[19.7,75.7,6],
+                'manipur':[24.7,93.9,7],'meghalaya':[25.5,91.4,7],
+                'mizoram':[23.2,92.9,7],'nagaland':[26.2,94.6,7],
+                'odisha':[20.9,84.2,6],'orissa':[20.9,84.2,6],
+                'punjab':[31.1,75.3,7],'rajasthan':[27.0,74.2,6],
+                'sikkim':[27.5,88.5,8],'tamil nadu':[11.1,78.7,6],
+                'telangana':[17.1,79.0,6],'tripura':[23.9,91.8,7],
+                'uttar pradesh':[27.1,80.7,6],'uttarakhand':[30.1,79.1,7],
+                'uttaranchal':[30.1,79.1,7],'west bengal':[22.6,88.4,7],
+                'delhi':[28.7,77.1,10],'new delhi':[28.6,77.2,11],
+                'jammu and kashmir':[33.7,76.8,7],'jammu & kashmir':[33.7,76.8,7],
+                'ladakh':[34.2,77.6,7],'puducherry':[11.9,79.8,10],
+                'pondicherry':[11.9,79.8,10],'chandigarh':[30.7,76.8,11],
+                'andaman and nicobar':[11.7,92.7,7],
+                // Australia States & Territories
+                'new south wales':[-31.9,145.6,5],'victoria':[-36.9,144.1,6],
+                'queensland':[-20.9,142.7,5],'western australia':[-25.0,121.6,5],
+                'south australia':[-30.0,135.8,5],'tasmania':[-41.5,146.0,7],
+                'northern territory':[-19.5,133.8,5],
+                'australian capital territory':[-35.5,149.0,8],
+                'nsw':[-31.9,145.6,5],'qld':[-20.9,142.7,5],
+                'act':[-35.5,149.0,8],'tas':[-41.5,146.0,7],
+                // USA States
+                'alabama':[32.3,-86.9,6],'alaska':[64.2,-153.4,4],
+                'arizona':[34.2,-111.1,6],'arkansas':[35.0,-92.4,6],
+                'california':[36.8,-119.4,5],'colorado':[39.0,-105.6,6],
+                'connecticut':[41.6,-72.7,8],'delaware':[39.0,-75.5,9],
+                'florida':[27.8,-81.6,6],'georgia':[32.2,-82.9,6],
+                'hawaii':[19.9,-155.6,7],'idaho':[44.1,-114.5,5],
+                'illinois':[40.4,-89.0,6],'indiana':[39.8,-86.1,7],
+                'iowa':[42.0,-93.2,6],'kansas':[38.5,-98.4,6],
+                'kentucky':[37.7,-84.9,6],'louisiana':[31.2,-92.5,6],
+                'maine':[44.7,-69.4,6],'maryland':[39.1,-76.8,7],
+                'massachusetts':[42.3,-71.6,8],'michigan':[43.3,-84.5,6],
+                'minnesota':[46.4,-93.1,5],'mississippi':[32.7,-89.7,6],
+                'missouri':[38.5,-92.5,6],'montana':[47.0,-110.5,5],
+                'nebraska':[41.5,-99.9,6],'nevada':[38.3,-117.1,6],
+                'new hampshire':[43.5,-71.6,8],'new jersey':[40.0,-74.4,8],
+                'new mexico':[34.3,-106.0,6],'new york':[42.2,-74.9,6],
+                'north carolina':[35.5,-79.7,6],'north dakota':[47.5,-100.5,6],
+                'ohio':[40.4,-82.8,7],'oklahoma':[35.5,-96.9,6],
+                'oregon':[43.9,-120.6,6],'pennsylvania':[40.6,-77.2,6],
+                'rhode island':[41.7,-71.5,9],'south carolina':[34.0,-80.9,7],
+                'south dakota':[44.3,-100.3,6],'tennessee':[35.8,-86.7,6],
+                'texas':[31.0,-100.0,5],'utah':[39.3,-111.1,6],
+                'vermont':[44.0,-72.7,8],'virginia':[37.8,-78.2,6],
+                'washington':[47.4,-120.5,6],'west virginia':[38.6,-80.5,7],
+                'wisconsin':[44.3,-89.6,6],'wyoming':[43.0,-107.6,6],
+                // Canadian Provinces
+                'ontario':[51.3,-85.3,5],'quebec':[52.9,-73.5,5],
+                'british columbia':[53.7,-127.7,5],'alberta':[53.9,-116.6,5],
+                'manitoba':[56.4,-98.7,5],'saskatchewan':[52.9,-106.5,5],
+                'nova scotia':[44.7,-63.8,7],'new brunswick':[46.6,-66.5,7],
+                'newfoundland':[53.1,-57.7,6],'prince edward island':[46.5,-63.4,9],
+                'northwest territories':[64.8,-124.8,5],'yukon':[64.3,-135.0,5],
+                'nunavut':[70.3,-86.5,5],'bc':[53.7,-127.7,5],
+                // Brazil States
+                'amazonas':[-3.1,-60.0,5],'para':[-3.8,-52.5,5],
+                'mato grosso':[-12.6,-56.1,5],'minas gerais':[-18.5,-44.6,6],
+                'bahia':[-12.0,-41.7,6],'goias':[-15.8,-49.6,6],
+                'maranhao':[-5.4,-45.3,6],'rio grande do sul':[-30.0,-53.2,6],
+                'sao paulo':[-22.3,-48.5,6],'rondonia':[-10.8,-62.9,6],
+                'roraima':[1.9,-61.4,6],'amapa':[1.4,-51.8,6],
+                'mato grosso do sul':[-20.8,-54.4,6],'tocantins':[-10.2,-48.2,6],
+                // China Provinces
+                'yunnan':[25.1,101.5,5],'sichuan':[30.7,102.7,5],
+                'guangdong':[23.4,113.4,6],'heilongjiang':[47.9,128.1,5],
+                'jilin':[43.7,126.2,6],'inner mongolia':[44.1,113.9,5],
+                'tibet':[31.6,88.1,6],'xinjiang':[42.6,86.8,5],
+                'hunan':[27.6,111.7,6],'hubei':[31.0,112.2,6],
+                'guangxi':[24.3,108.4,6],'hainan':[20.0,110.3,7],
+                'fujian':[26.1,118.0,6],'zhejiang':[29.2,120.2,6],
+                'guizhou':[26.8,106.8,6],'shaanxi':[35.2,108.9,6],
+                'qinghai':[35.7,96.1,5],'gansu':[36.1,103.7,5],
+                // Russia/Taiga regions
+                'siberia':[60.0,102.0,4],'taiga':[60.0,90.0,4],
+            };
+
+            // ── Level 1: District / City → [lat, lon, zoom] ──
+            const DISTRICT_COORDS = {
+                // Maharashtra
+                'nashik':[20.0,73.8,10],'nagpur':[21.1,79.1,10],
+                'pune':[18.5,73.9,11],'mumbai':[19.1,72.8,11],'bombay':[19.1,72.8,11],
+                'thane':[19.2,73.0,11],'solapur':[17.7,75.9,10],
+                'aurangabad':[19.9,75.3,10],'kolhapur':[16.7,74.2,10],
+                'satara':[17.7,74.0,10],'nanded':[19.2,77.3,10],
+                'amravati':[20.9,77.8,10],'latur':[18.4,76.6,10],
+                'akola':[20.7,77.0,10],'jalgaon':[21.0,75.6,10],
+                // Karnataka
+                'bengaluru':[12.9,77.6,11],'bangalore':[12.9,77.6,11],
+                'mysuru':[12.3,76.6,11],'mysore':[12.3,76.6,11],
+                'mangaluru':[12.9,74.8,11],'mangalore':[12.9,74.8,11],
+                'hubballi':[15.3,75.1,11],'hubli':[15.3,75.1,11],
+                'belagavi':[15.8,74.5,11],'belgaum':[15.8,74.5,11],
+                'kalaburagi':[17.3,76.8,10],'gulbarga':[17.3,76.8,10],
+                'shivamogga':[13.9,75.6,10],'shimoga':[13.9,75.6,10],
+                'ballari':[15.1,76.9,10],'bellary':[15.1,76.9,10],
+                'tumkur':[13.3,77.1,10],'davanagere':[14.5,75.9,10],
+                'vijayapura':[16.8,75.7,10],'bijapur':[16.8,75.7,10],
+                // Tamil Nadu
+                'chennai':[13.1,80.3,11],'madras':[13.1,80.3,11],
+                'coimbatore':[11.0,76.9,11],'madurai':[9.9,78.1,11],
+                'trichy':[10.8,78.7,11],'tiruchirappalli':[10.8,78.7,11],
+                'salem':[11.7,78.2,11],'tirunelveli':[8.7,77.7,11],
+                'vellore':[12.9,79.1,10],'erode':[11.3,77.7,10],
+                'tiruppur':[11.1,77.3,10],'thanjavur':[10.8,79.1,10],
+                // Telangana / AP
+                'hyderabad':[17.4,78.5,11],'secunderabad':[17.4,78.5,11],
+                'warangal':[18.0,79.6,10],'nizamabad':[18.7,78.1,10],
+                'kurnool':[15.8,78.1,10],'vizag':[17.7,83.3,11],
+                'visakhapatnam':[17.7,83.3,11],'vijayawada':[16.5,80.6,11],
+                'tirupati':[13.6,79.4,10],'guntur':[16.3,80.4,10],
+                'nellore':[14.4,79.9,10],'kakinada':[16.9,82.2,10],
+                // West Bengal
+                'kolkata':[22.6,88.4,11],'calcutta':[22.6,88.4,11],
+                'howrah':[22.6,88.3,11],'darjeeling':[27.0,88.3,10],
+                'siliguri':[26.7,88.4,11],'durgapur':[23.5,87.3,11],
+                'asansol':[23.7,86.9,10],'kharagpur':[22.3,87.3,10],
+                // Odisha / NE India
+                'bhubaneswar':[20.3,85.8,11],'cuttack':[20.5,85.9,11],
+                'guwahati':[26.2,91.7,11],'dibrugarh':[27.5,94.9,10],
+                'shillong':[25.6,91.9,11],'aizawl':[23.7,92.7,11],
+                'agartala':[23.8,91.3,11],'imphal':[24.8,93.9,11],
+                'kohima':[25.7,94.1,11],'itanagar':[27.1,93.6,11],
+                'gangtok':[27.3,88.6,11],
+                // Bihar / Jharkhand
+                'patna':[25.6,85.1,11],'gaya':[24.8,85.0,10],
+                'muzaffarpur':[26.1,85.4,10],'bhagalpur':[25.3,87.0,10],
+                'ranchi':[23.4,85.3,11],'jamshedpur':[22.8,86.2,11],
+                'dhanbad':[23.8,86.5,10],'bokaro':[23.7,85.9,10],
+                // Chhattisgarh (forest-heavy)
+                'raipur':[21.3,81.6,11],'bilaspur':[22.1,82.1,10],
+                'bastar':[19.1,81.9,9],'jagdalpur':[19.1,81.9,10],
+                'narayanpur':[19.7,81.2,9],'sukma':[18.4,81.7,9],
+                'dantewada':[18.9,81.4,9],'kanker':[20.3,81.5,10],
+                'kondagaon':[19.6,81.7,10],'jashpur':[22.9,83.8,10],
+                'raigarh':[21.9,83.4,10],'korba':[22.4,82.7,10],
+                'surguja':[23.1,82.7,9],'bijapur cg':[18.8,80.8,9],
+                // MP (forest-heavy: Satpura, Kanha, Pench areas)
+                'bhopal':[23.3,77.4,11],'indore':[22.7,75.9,11],
+                'jabalpur':[23.2,79.9,11],'gwalior':[26.2,78.2,11],
+                'mandla':[22.6,80.4,10],'seoni':[22.1,79.5,10],
+                'balaghat':[21.8,80.2,10],'chhindwara':[22.1,78.9,10],
+                'betul':[21.9,77.9,10],'hoshangabad':[22.8,77.7,10],
+                'khandwa':[21.8,76.4,10],'burhanpur':[21.3,76.2,10],
+                'rewa':[24.5,81.3,10],'satna':[24.6,80.8,10],
+                'sagar':[23.8,78.7,10],'singrauli':[24.2,82.7,10],
+                // Jharkhand (forest districts)
+                'west singhbhum':[22.1,85.0,9],'east singhbhum':[22.8,86.2,9],
+                'simdega':[22.6,84.5,10],'gumla':[23.0,84.5,10],
+                'lohardaga':[23.4,84.7,10],'latehar':[23.7,84.5,10],
+                'palamu':[24.0,84.1,9],'hazaribagh':[24.0,85.4,10],
+                'giridih':[24.2,86.3,10],'deoghar':[24.5,86.7,10],
+                'dumka':[24.3,87.2,10],'pakur':[24.6,87.8,10],
+                // Uttarakhand (forest districts)
+                'dehradun':[30.3,78.0,11],'haridwar':[29.9,78.2,10],
+                'rishikesh':[30.1,78.3,11],'nainital':[29.4,79.5,11],
+                'almora':[29.6,79.7,10],'chamoli':[30.4,79.3,9],
+                'uttarkashi':[30.7,78.4,10],'pithoragarh':[29.6,80.2,10],
+                'pauri':[30.1,78.8,10],'tehri':[30.4,78.5,10],
+                'rudraprayag':[30.3,79.0,10],
+                // UP
+                'lucknow':[26.8,80.9,11],'kanpur':[26.5,80.3,11],
+                'agra':[27.2,78.0,11],'varanasi':[25.3,83.0,11],
+                'allahabad':[25.5,81.8,11],'prayagraj':[25.5,81.8,11],
+                'meerut':[29.0,77.7,11],'ghaziabad':[28.7,77.4,11],
+                'bareilly':[28.4,79.4,10],'gorakhpur':[26.8,83.4,10],
+                // Rajasthan
+                'jaipur':[26.9,75.8,11],'jodhpur':[26.3,73.0,11],
+                'kota':[25.2,75.9,11],'udaipur':[24.6,73.7,11],
+                'ajmer':[26.5,74.6,10],'bikaner':[28.0,73.3,10],
+                // Punjab / Haryana
+                'amritsar':[31.6,74.9,11],'ludhiana':[30.9,75.9,11],
+                'jalandhar':[31.3,75.6,11],'patiala':[30.3,76.4,10],
+                'gurugram':[28.5,77.0,11],'gurgaon':[28.5,77.0,11],
+                'faridabad':[28.4,77.3,11],'rohtak':[28.9,76.6,10],
+                // Himachal Pradesh
+                'shimla':[31.1,77.2,11],'dharamshala':[32.2,76.3,11],
+                'manali':[32.3,77.2,11],'kullu':[31.9,77.1,10],
+                // J&K / Ladakh
+                'srinagar':[34.1,74.8,11],'jammu':[32.7,74.9,11],
+                'leh':[34.2,77.6,11],'kargil':[34.6,76.1,10],
+                // Kerala
+                'thiruvananthapuram':[8.5,76.9,11],'trivandrum':[8.5,76.9,11],
+                'kochi':[9.9,76.3,11],'cochin':[9.9,76.3,11],
+                'kozhikode':[11.3,75.8,11],'calicut':[11.3,75.8,11],
+                'thrissur':[10.5,76.2,11],'kollam':[8.9,76.6,11],
+                'palakkad':[10.8,76.7,10],'malappuram':[11.1,76.1,10],
+                // Gujarat
+                'ahmedabad':[23.0,72.6,11],'surat':[21.2,72.8,11],
+                'vadodara':[22.3,73.2,11],'baroda':[22.3,73.2,11],
+                'rajkot':[22.3,70.8,11],'bhavnagar':[21.8,72.2,10],
+                'junagadh':[21.5,70.5,10],'jamnagar':[22.5,70.1,10],
+                // Goa
+                'panaji':[15.5,73.8,11],'panjim':[15.5,73.8,11],
+                // Australia cities
+                'sydney':[-33.9,151.2,11],'melbourne':[-37.8,145.0,11],
+                'brisbane':[-27.5,153.0,11],'perth':[-31.9,115.9,11],
+                'adelaide':[-34.9,138.6,11],'canberra':[-35.3,149.1,11],
+                'darwin':[-12.5,130.8,11],'hobart':[-42.9,147.3,11],
+                'gold coast':[-28.0,153.4,11],'cairns':[-16.9,145.8,11],
+                'townsville':[-19.3,146.8,11],'newcastle aus':[-32.9,151.8,11],
+                // USA cities
+                'los angeles':[34.1,-118.2,10],'chicago':[41.9,-87.6,10],
+                'houston':[29.8,-95.4,10],'phoenix':[33.4,-112.1,10],
+                'san francisco':[37.8,-122.4,11],'seattle':[47.6,-122.3,11],
+                'miami':[25.8,-80.2,11],'boston':[42.4,-71.1,11],
+                'denver':[39.7,-104.9,11],'portland':[45.5,-122.6,11],
+                'atlanta':[33.7,-84.4,11],'minneapolis':[44.9,-93.2,11],
+            };
+
+            // Lookup: checks district → state → country; returns {coords, zoom, level}
+            function getApproxCoords(name) {
+                if (!name) return null;
+                // Normalize: remove file extension, replace _ / - with space
+                const clean = name.toLowerCase().trim()
+                    .replace(/\.(csv|xlsx?|json)$/i,'').replace(/[_-]/g,' ');
+                // Check most-specific first
+                for (const [key, val] of Object.entries(DISTRICT_COORDS)) {
+                    if (clean === key || clean.includes(key))
+                        return { coords:[val[0],val[1]], zoom:val[2], level:'district' };
+                }
+                for (const [key, val] of Object.entries(STATE_COORDS)) {
+                    if (clean === key || clean.includes(key))
+                        return { coords:[val[0],val[1]], zoom:val[2], level:'state' };
+                }
+                for (const [key, coords] of Object.entries(REGION_COORDS)) {
+                    if (clean === key || clean.includes(key))
+                        return { coords, zoom:4, level:'country' };
+                }
+                return null;
+            }
+
+            function getColorByAccuracy(acc) {
+                // acc 0‒1: red < 0.5, orange 0.5-0.7, green ≥ 0.7
+                if (acc >= 0.85) return '#06d6a0';
+                if (acc >= 0.70) return '#4ade80';
+                if (acc >= 0.50) return '#ff9e00';
+                return '#ef476f';
+            }
+
+            function initPredMap() {
+                if (_predMap) { _predMap.remove(); _predMap = null; }
+                const el = document.getElementById('prediction-map');
+                if (!el) return;
+                _predMap = L.map('prediction-map', {
+                    center: [20, 0], zoom: 2,
+                    scrollWheelZoom: true,
+                    zoomControl: true
+                });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18
+                }).addTo(_predMap);
+                _predMapMarkers = [];
+            }
+
+            function showPredictionMap(predData) {
+                const mapCard = document.getElementById('prediction-map-card');
+                if (!mapCard) return;
+                mapCard.style.display = 'block';
+                setTimeout(() => {
+                    initPredMap();
+                    if (!_predMap) return;
+
+                    const legendEl = document.getElementById('prediction-map-legend');
+                    legendEl.innerHTML = `
+                        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#06d6a0;display:inline-block;"></span> ≥85% accuracy</span>
+                        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#4ade80;display:inline-block;"></span> 70-85%</span>
+                        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#ff9e00;display:inline-block;"></span> 50-70%</span>
+                        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:50%;background:#ef476f;display:inline-block;"></span> <50%</span>`;
+
+                    if (predData.row_wise && predData.predictions) {
+                        // Region/country predictions from row-wise
+                        const regionName = predData.filter_value || '';
+                        const geoRow = getApproxCoords(regionName) || {coords:[20,0], zoom:2, level:'world'};
+                        const coords = geoRow.coords;
+                        const avgAcc = predData.predictions.reduce((s,p)=>s+(p.accuracy||0),0) / (predData.predictions.length||1);
+                        const color  = getColorByAccuracy(avgAcc);
+
+                        // Main location marker
+                        const marker = L.circleMarker(coords, {
+                            radius: 22, fillColor: color, color: '#fff',
+                            weight: 3, opacity: 1, fillOpacity: 0.82
+                        }).addTo(_predMap);
+
+                        const rows = predData.predictions.map(p =>
+                            `<tr><td style='padding:4px 8px;'>${p.metric}</td>
+                             <td style='padding:4px 8px;text-align:right;color:#4361ee;font-weight:700;'>${(p.prediction||0).toFixed(3)}</td>
+                             <td style='padding:4px 8px;text-align:right;color:${getColorByAccuracy(p.accuracy||0)};'>${((p.accuracy||0)*100).toFixed(1)}%</td></tr>`
+                        ).join('');
+
+                        marker.bindPopup(`
+                            <div style='min-width:240px;'>
+                                <b style='font-size:1.05em;color:#334155;'>📍 ${escapeHtml(regionName)}</b>
+                                <p style='color:#64748b;font-size:0.82em;margin:4px 0;'>Year: ${predData.year} | Dataset: ${predData.dataset||''}</p>
+                                <table style='width:100%;border-collapse:collapse;font-size:0.85em;'>
+                                    <tr style='background:#f0f7ff;'><th style='padding:4px 8px;text-align:left;'>Metric</th><th style='padding:4px 8px;'>Predicted</th><th style='padding:4px 8px;'>Accuracy</th></tr>
+                                    ${rows}
+                                </table>
+                            </div>`, {maxWidth: 320}).openPopup();
+
+                        _predMap.setView(coords, geoRow.zoom);
+
+                        // Draw pulse ring
+                        L.circleMarker(coords, {
+                            radius: 36, fillColor: color, color: color,
+                            weight: 2, opacity: 0.3, fillOpacity: 0.1
+                        }).addTo(_predMap);
+
+                    } else {
+                        // Column-wise – try filter_value first, then dataset name
+                        const region = predData.filter_value || predData.dataset || 'global';
+                        const geoCol = getApproxCoords(region) || {coords:[20,0], zoom:2, level:'world'};
+                        const coords = geoCol.coords;
+                        const acc = predData.accuracy || 0;
+                        const color = getColorByAccuracy(acc);
+
+                        const marker = L.circleMarker(coords, {
+                            radius: 22, fillColor: color, color: '#fff',
+                            weight: 3, opacity: 1, fillOpacity: 0.82
+                        }).addTo(_predMap);
+
+                        marker.bindPopup(`
+                            <div style='min-width:220px;'>
+                                <b style='font-size:1.05em;color:#334155;'>📍 ${escapeHtml(region)}</b>
+                                <p style='color:#64748b;font-size:0.82em;margin:6px 0;'>Metric: <strong>${escapeHtml(predData.metric||'')}</strong></p>
+                                <p>Year: <strong>${predData.year}</strong></p>
+                                <p>Predicted: <strong style='color:#4361ee;font-size:1.1em;'>${(predData.prediction||0).toFixed(3)}</strong></p>
+                                <p>Accuracy: <strong style='color:${color};'>${(acc*100).toFixed(1)}%</strong></p>
+                                <p style='color:#64748b;font-size:0.8em;'>Based on ${predData.data_points||0} data points</p>
+                            </div>`, {maxWidth: 280}).openPopup();
+
+                        _predMap.setView(coords, geoCol.zoom);
+                        L.circleMarker(coords, {
+                            radius: 36, fillColor: color, color: color,
+                            weight: 2, opacity: 0.3, fillOpacity: 0.1
+                        }).addTo(_predMap);
+                    }
+                    // Force tile refresh
+                    setTimeout(() => _predMap && _predMap.invalidateSize(), 200);
+                }, 100);
+            }
+            async function showInsightsModal({metric, year, value, accuracy, dataset, model}) {
+                try {
+                    const r = await fetch('/api/insights', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({metric, year, value, accuracy, dataset, model})
+                    });
+                    const data = await r.json();
+                    if (!data.success) return;
+
+                    const riskColor = data.risk_level==='low'?'#06d6a0':data.risk_level==='high'?'#ef476f':'#ff9e00';
+                    const body = document.getElementById('insights-body');
+                    body.innerHTML = `
+                        <div style="display:inline-block;padding:6px 14px;border-radius:20px;background:${riskColor};color:#fff;font-weight:600;margin-bottom:15px;">
+                            Risk Level: ${data.risk_level?.toUpperCase()||'MODERATE'}
+                        </div>
+                        <h4 style="color:#334155;margin-bottom:10px;">💡 Insights</h4>
+                        ${(data.insights||[]).map(i=>`<div class="insight-item">${i}</div>`).join('')}
+                        <h4 style="color:#334155;margin:15px 0 10px;">✅ Recommendations</h4>
+                        ${(data.recommendations||[]).map(r=>`<div class="rec-item">→ ${r}</div>`).join('')}
+                    `;
+                    document.getElementById('insights-modal').style.display = 'flex';
+                } catch(e) { console.error('insights', e); }
+            }
+            function closeInsightsModal() {
+                document.getElementById('insights-modal').style.display = 'none';
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // ANALYTICS TAB
+            // ─────────────────────────────────────────────────────────────
+            let _analyticsCharts = {};
+            async function loadAnalytics() {
+                try {
+                    const r = await fetch('/api/prediction-analytics');
+                    const data = await r.json();
+                    if (!data.success) return;
+
+                    const summary = document.getElementById('analytics-summary');
+                    const accPct = (data.avg_accuracy||0).toFixed(1);
+                    summary.innerHTML = `
+                        <div class="stat-card"><div class="stat-value">${data.total_predictions||0}</div><div class="stat-label">Total Predictions</div></div>
+                        <div class="stat-card"><div class="stat-value" style="color:${accPct>=70?'#06d6a0':'#ff9e00'}">${accPct}%</div><div class="stat-label">Avg Accuracy</div></div>
+                        <div class="stat-card"><div class="stat-value">${(data.top_metrics||[{metric:'—'}])[0]?.metric||'—'}</div><div class="stat-label">Top Metric</div></div>
+                        <div class="stat-card"><div class="stat-value">${(data.model_distribution||[{model:'—'}])[0]?.model?.replace(/_/g,' ')||'—'}</div><div class="stat-label">Most Used Model</div></div>
+                    `;
+
+                    // Accuracy over time chart
+                    const trend = data.accuracy_trend||[];
+                    renderAnalyticsChart('analyticsAccuracyChart', 'line', {
+                        labels: trend.map(t=>t.date||''),
+                        datasets:[{ label:'Accuracy %', data:trend.map(t=>t.avg_accuracy||0),
+                                    borderColor:'#4361ee', backgroundColor:'rgba(67,97,238,0.08)',
+                                    tension:0.4, fill:true }]
+                    }, {scales:{y:{min:0,max:100}}});
+
+                    // Model distribution doughnut
+                    const models = data.model_distribution||[];
+                    const modelColors = ['#4361ee','#06d6a0','#ff9e00','#ef476f','#7c3aed'];
+                    renderAnalyticsChart('analyticsModelChart', 'doughnut', {
+                        labels: models.map(m=>(m.model||'').replace(/_/g,' ')),
+                        datasets:[{ data: models.map(m=>m.count||0),
+                                    backgroundColor: modelColors }]
+                    }, {plugins:{legend:{position:'bottom'}}});
+
+                    // Top metrics bar
+                    const metrics = (data.top_metrics||[]).slice(0,6);
+                    renderAnalyticsChart('analyticsMetricsChart', 'bar', {
+                        labels: metrics.map(m=>m.metric||''),
+                        datasets:[{ label:'Predictions', data:metrics.map(m=>m.count||0),
+                                    backgroundColor:'#7c3aed', borderRadius:6 }]
+                    }, {plugins:{legend:{display:false}}, scales:{x:{ticks:{maxRotation:30}}}});
+
+                    // Accuracy distribution pie
+                    const dist = data.accuracy_distribution || {};
+                    renderAnalyticsChart('analyticsAccDistChart', 'pie', {
+                        labels:['Excellent (≥90%)', 'Good (70-90%)', 'Fair (50-70%)', 'Poor (<50%)'],
+                        datasets:[{ data:[dist.excellent||0, dist.good||0, dist.fair||0, dist.poor||0],
+                                    backgroundColor:['#06d6a0','#4361ee','#ff9e00','#ef476f'] }]
+                    }, {plugins:{legend:{position:'bottom'}}});
+
+                } catch(e) { console.error('analytics', e); }
+            }
+
+            function renderAnalyticsChart(id, type, chartData, options={}) {
+                const ctx = document.getElementById(id);
+                if (!ctx) return;
+                // Fix growing chart: always destroy properly before re-creating
+                if (_analyticsCharts[id]) {
+                    try { _analyticsCharts[id].destroy(); } catch(e){}
+                    delete _analyticsCharts[id];
+                }
+                const mergedOpts = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 400 },
+                    ...options
+                };
+                _analyticsCharts[id] = new Chart(ctx.getContext('2d'), {
+                    type, data: chartData, options: mergedOpts
+                });
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // FAVORITES TAB
+            // ─────────────────────────────────────────────────────────────
+            async function loadFavorites() {
+                try {
+                    const r = await fetch('/api/favorites');
+                    const data = await r.json();
+                    const list = document.getElementById('favorites-list');
+                    if (!list) return;
+                    const favs = data.favorites||[];
+                    if (!favs.length) { list.innerHTML='<p style="color:#64748b;">No favorites yet. Mark datasets as favorite from the Datasets tab or the form above.</p>'; return; }
+                    list.innerHTML = favs.map(f=>`
+                        <div class="fav-card">
+                            <div>
+                                <strong style="color:#334155;">${f.dataset_name}</strong>
+                                <span class="fav-label ${f.label}">${f.label==='favorite'?'⭐':f.label==='primary'?'🎯':'📦'} ${f.label}</span>
+                                ${f.row_count?`<span style="color:#64748b;font-size:0.85em;margin-left:8px;">${f.row_count} rows</span>`:''}
+                            </div>
+                            <button onclick="removeFavorite('${f.dataset_name}')" style="background:none;border:none;color:#ef476f;cursor:pointer;font-size:1.1em;" title="Remove">🗑️</button>
+                        </div>`).join('');
+                } catch(e) { console.error('loadFavorites', e); }
+            }
+
+            async function saveFavorite() {
+                const dataset = document.getElementById('fav-dataset-select')?.value;
+                const label   = document.getElementById('fav-label')?.value;
+                if (!dataset) { showNotification('Select a dataset first.', 'error'); return; }
+                try {
+                    const r = await fetch('/api/favorites', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ dataset_name: dataset, label })
+                    });
+                    const d = await r.json();
+                    showNotification(d.message || (d.success?'Saved':'Error'), d.success?'success':'error');
+                    if (d.success) loadFavorites();
+                } catch(e) { showNotification(e.message,'error'); }
+            }
+
+            async function removeFavorite(name) {
+                try {
+                    const r = await fetch(`/api/favorites/${encodeURIComponent(name)}`, { method:'DELETE' });
+                    const d = await r.json();
+                    showNotification(d.message || (d.success?'Removed':'Error'), d.success?'success':'error');
+                    if (d.success) loadFavorites();
+                } catch(e) { showNotification(e.message,'error'); }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // COMPARE TAB
+            // ─────────────────────────────────────────────────────────────
+            let _compareChart = null;
+            async function onCmpDatasetChange() {
+                const dataset = document.getElementById('cmp-dataset')?.value;
+                if (!dataset || dataset === '') return;
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/columns`);
+                    const data = await r.json();
+                    // columns can be [{column_name, is_numeric}] or plain strings
+                    const rawCols = data.columns || [];
+                    const cols = rawCols.map(c => typeof c === 'string'
+                        ? {column_name: c, is_numeric: false}
+                        : c);
+
+                    // Region column selector: prefer non-numeric (Country, Region, etc.)
+                    const catCols = cols.filter(c => !c.is_numeric);
+                    const regionSel = document.getElementById('cmp-region-col');
+                    if (regionSel) {
+                        const regionOpts = (catCols.length ? catCols : cols);
+                        regionSel.innerHTML = regionOpts.map(c=>`<option value="${c.column_name}">${c.column_name}</option>`).join('');
+                        regionSel.onchange = () => loadRegionValues();
+                    }
+
+                    // Numeric metrics multi-select
+                    const numCols = cols.filter(c => c.is_numeric);
+                    const metricSel = document.getElementById('cmp-metric-col');
+                    if (metricSel) {
+                        const metricOpts = (numCols.length ? numCols : cols);
+                        metricSel.innerHTML = metricOpts.map(c=>`<option value="${c.column_name}">${c.column_name}</option>`).join('');
+                        [...metricSel.options].forEach(o=>o.selected=true);
+                    }
+
+                    loadRegionValues();
+                } catch(e) { console.error('onCmpDatasetChange',e); }
+            }
+
+            async function loadRegionValues() {
+                const dataset   = document.getElementById('cmp-dataset')?.value;
+                const regionCol = document.getElementById('cmp-region-col')?.value;
+                if (!dataset || !regionCol || dataset==='' ) return;
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/row-identifiers`);
+                    const data = await r.json();
+                    const selA = document.getElementById('cmp-region-a');
+                    const selB = document.getElementById('cmp-region-b');
+                    // Backend may return identifiers array or single identifier_column/values
+                    let vals = [];
+                    if (data.identifiers && data.identifiers.length) {
+                        const found = data.identifiers.find(i=>i.column===regionCol);
+                        vals = found ? found.values : (data.identifiers[0]?.values || []);
+                    } else if (data.values) {
+                        vals = data.values;
+                    }
+                    if (selA) selA.innerHTML = vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+                    if (selB) {
+                        selB.innerHTML = vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+                        if (selB.options.length>1) selB.selectedIndex = 1;
+                    }
+                } catch(e) { console.error('loadRegionValues',e); }
+            }
+
+            async function runRegionComparison() {
+                const dataset   = document.getElementById('cmp-dataset')?.value;
+                const regionCol = document.getElementById('cmp-region-col')?.value;
+                const regionA   = document.getElementById('cmp-region-a')?.value;
+                const regionB   = document.getElementById('cmp-region-b')?.value;
+                const metricSel = document.getElementById('cmp-metric-col');
+                const metrics   = metricSel ? [...metricSel.selectedOptions].map(o=>o.value) : [];
+
+                if (!dataset||!regionCol||!regionA||!regionB) {
+                    showNotification('Fill all comparison fields.','error'); return;
+                }
+
+                const result = document.getElementById('compare-result');
+                result.innerHTML = '<p style="color:#64748b;">⏳ Comparing regions...</p>';
+
+                try {
+                    const r = await fetch('/api/compare-regions', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({dataset, region_column:regionCol, region_a:regionA, region_b:regionB, metrics})
+                    });
+                    const data = await r.json();
+                    if (!data.success) { result.innerHTML = `<p style="color:#dc2626;">${data.message}</p>`; return; }
+
+                    const comparison = data.comparison||{};
+                    const metricKeys = Object.keys(comparison);
+                    if (!metricKeys.length) { result.innerHTML='<p>No comparable numeric data found.</p>'; return; }
+
+                    // Show summary table
+                    result.innerHTML = `
+                        <h4 style="color:#4361ee;margin-bottom:12px;">⚖️ ${regionA} vs ${regionB}</h4>
+                        <div style="overflow-x:auto;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+                            <thead><tr style="background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;">
+                                <th style="padding:10px;text-align:left;">Metric</th>
+                                <th style="padding:10px;text-align:right;">${regionA} (latest)</th>
+                                <th style="padding:10px;text-align:right;">${regionA} (avg)</th>
+                                <th style="padding:10px;text-align:right;">${regionB} (latest)</th>
+                                <th style="padding:10px;text-align:right;">${regionB} (avg)</th>
+                            </tr></thead>
+                            <tbody>${metricKeys.map((m,i)=>{
+                                const s=comparison[m].summary||{};
+                                return `<tr style="background:${i%2?'#f1f5f9':'#fff'};">
+                                    <td style="padding:10px;font-weight:600;">${m}</td>
+                                    <td style="padding:10px;text-align:right;">${s.a_latest!=null?s.a_latest.toFixed(3):'—'}</td>
+                                    <td style="padding:10px;text-align:right;color:#4361ee;">${s.a_avg!=null?s.a_avg.toFixed(3):'—'}</td>
+                                    <td style="padding:10px;text-align:right;">${s.b_latest!=null?s.b_latest.toFixed(3):'—'}</td>
+                                    <td style="padding:10px;text-align:right;color:#7c3aed;">${s.b_avg!=null?s.b_avg.toFixed(3):'—'}</td>
+                                </tr>`;
+                            }).join('')}</tbody>
+                        </table></div>`;
+
+                    // Chart for first metric
+                    const firstMetric = metricKeys[0];
+                    const cm = comparison[firstMetric];
+                    const allYears = [...new Set([
+                        ...(cm.region_a.data||[]).map(d=>d.year),
+                        ...(cm.region_b.data||[]).map(d=>d.year)
+                    ])].sort();
+
+                    const aMap = Object.fromEntries((cm.region_a.data||[]).map(d=>[d.year,d.value]));
+                    const bMap = Object.fromEntries((cm.region_b.data||[]).map(d=>[d.year,d.value]));
+
+                    const ctx = document.getElementById('compareChart');
+                    ctx.style.display='block';
+                    if (_compareChart) _compareChart.destroy();
+                    _compareChart = new Chart(ctx.getContext('2d'), {
+                        type:'line',
+                        data:{
+                            labels: allYears,
+                            datasets:[
+                                { label: regionA, data: allYears.map(y=>aMap[y]??null), borderColor:'#4361ee', backgroundColor:'rgba(67,97,238,0.08)', tension:0.4, fill:false },
+                                { label: regionB, data: allYears.map(y=>bMap[y]??null), borderColor:'#ef476f', backgroundColor:'rgba(239,71,111,0.08)', tension:0.4, fill:false }
+                            ]
+                        },
+                        options:{ responsive:true, plugins:{ title:{ display:true, text:`${firstMetric}` } } }
+                    });
+                } catch(e) { result.innerHTML=`<p style="color:red;">${e.message}</p>`; }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // CLIMATE RISK TAB
+            // ─────────────────────────────────────────────────────────────
+            async function onClimateDatasetChange() {
+                const dataset = document.getElementById('climate-dataset')?.value;
+                if (!dataset || dataset === '') return;
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/columns`);
+                    const data = await r.json();
+                    const rawCols = data.columns || [];
+                    const cols = rawCols.map(c => typeof c === 'string'
+                        ? {column_name: c, is_numeric: !isNaN(parseFloat(c))}
+                        : c);
+
+                    const filterColSel = document.getElementById('climate-filter-col');
+                    if(filterColSel) {
+                        const catCols = cols.filter(c => !c.is_numeric);
+                        filterColSel.innerHTML = '<option value="">-- No Filter --</option>' +
+                            catCols.map(c=>`<option value="${c.column_name}">${c.column_name}</option>`).join('');
+                        filterColSel.onchange = () => onClimateFilterColChange();
+                    }
+                } catch(e) { console.error('onClimateDatasetChange',e); }
+            }
+
+            async function onClimateFilterColChange() {
+                const dataset   = document.getElementById('climate-dataset')?.value;
+                const filterCol = document.getElementById('climate-filter-col')?.value;
+                const valSel    = document.getElementById('climate-filter-val');
+                if (!filterCol || !valSel) return;
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/row-identifiers`);
+                    const data = await r.json();
+                    const vals = (data.identifiers||[]).find(i=>i.column===filterCol)?.values||[];
+                    valSel.innerHTML = vals.map(v=>`<option value="${v}">${v}</option>`).join('');
+                } catch(e) { console.error('onClimateFilterColChange',e); }
+            }
+
+            async function runClimateRisk() {
+                const dataset    = document.getElementById('climate-dataset')?.value;
+                const filterCol  = document.getElementById('climate-filter-col')?.value || null;
+                const filterVal  = document.getElementById('climate-filter-val')?.value || null;
+                const horizonYr  = parseInt(document.getElementById('climate-year')?.value || 2050);
+
+                if (!dataset) { showNotification('Select a dataset first.','error'); return; }
+                const resultDiv = document.getElementById('climate-result');
+                resultDiv.innerHTML = '<p style="color:#64748b;">⏳ Assessing climate risk...</p>';
+
+                try {
+                    const r = await fetch('/api/climate-risk', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({ dataset, filter_column:filterCol, filter_value:filterVal, horizon_year:horizonYr })
+                    });
+                    const data = await r.json();
+                    if (!data.success) { resultDiv.innerHTML=`<p style="color:#dc2626;">${data.message}</p>`; return; }
+
+                    const metricsHtml = Object.entries(data.metrics||{}).map(([m,v])=>`
+                        <tr>
+                            <td style="padding:10px;">${m}</td>
+                            <td style="padding:10px;text-align:right;">${v.current?.toFixed(3)??'—'}</td>
+                            <td style="padding:10px;text-align:right;">${v.predicted?.toFixed(3)??'—'}</td>
+                            <td style="padding:10px;text-align:right;color:${v.pct_change<0?'#ef476f':'#06d6a0'};">${v.pct_change>0?'+':''}${v.pct_change?.toFixed(1)??'—'}%</td>
+                        </tr>`).join('');
+
+                    resultDiv.innerHTML = `
+                        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
+                            <div class="risk-gauge">
+                                <div class="risk-score-circle" style="background:${data.risk_color||'#ff9e00'};">
+                                    ${data.risk_score}<small>/100</small>
+                                </div>
+                                <div style="font-size:1.2em;font-weight:700;color:${data.risk_color||'#ff9e00'};">${data.risk_level} Risk</div>
+                                <div style="color:#64748b;font-size:0.85em;">Horizon: ${data.horizon_year}</div>
+                            </div>
+                            <div style="flex:1;min-width:300px;">
+                                <table style="width:100%;border-collapse:collapse;font-size:0.88em;">
+                                    <thead><tr style="background:#f1f5f9;">
+                                        <th style="padding:10px;text-align:left;">Metric</th>
+                                        <th style="padding:10px;text-align:right;">Current</th>
+                                        <th style="padding:10px;text-align:right;">At ${data.horizon_year}</th>
+                                        <th style="padding:10px;text-align:right;">Change</th>
+                                    </tr></thead>
+                                    <tbody>${metricsHtml}</tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                } catch(e) { resultDiv.innerHTML=`<p style="color:red;">${e.message}</p>`; }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // DATASET CLEANING
+            // ─────────────────────────────────────────────────────────────
+            async function runCleanOp(opType) {
+                const dataset = document.getElementById('clean-dataset-select')?.value;
+                if (!dataset) { showNotification('Select a dataset first.','error'); return; }
+
+                let ops = [];
+                if (opType === 'remove_nulls')     ops = [{type:'remove_nulls'}];
+                if (opType === 'remove_duplicates') ops = [{type:'remove_duplicates'}];
+                if (opType === 'fill_nulls_mean')   ops = [{type:'fill_nulls', strategy:'mean'}];
+                if (opType === 'fill_nulls_median') ops = [{type:'fill_nulls', strategy:'median'}];
+
+                const resultDiv = document.getElementById('clean-result');
+                resultDiv.innerHTML='<p style="color:#64748b;">⏳ Cleaning...</p>';
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/clean`, {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({operations:ops})
+                    });
+                    const d = await r.json();
+                    if (d.success) {
+                        resultDiv.innerHTML=`<div style="background:#f0fdf4;padding:14px;border-radius:10px;color:#166534;">
+                            ✅ Cleaned! Rows: ${d.rows_before} → ${d.rows_after} (removed ${d.removed})<br>
+                            <small>${(d.logs||[]).join(' | ')}</small>
+                        </div>`;
+                        showNotification(`Cleaned ${dataset} successfully!`,'success');
+                    } else {
+                        resultDiv.innerHTML=`<p style="color:#dc2626;">❌ ${d.message}</p>`;
+                    }
+                } catch(e) { resultDiv.innerHTML=`<p style="color:red;">${e.message}</p>`; }
+            }
+
+            let _normalizeDatasetCols = [];
+            async function openNormalizeModal() {
+                const dataset = document.getElementById('clean-dataset-select')?.value;
+                if (!dataset) { showNotification('Select a dataset first.','error'); return; }
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/columns`);
+                    const data = await r.json();
+                    _normalizeDatasetCols = (data.columns||[]).filter(c=>c.is_numeric).map(c=>c.column_name);
+                    const list = document.getElementById('normalize-col-list');
+                    list.innerHTML = _normalizeDatasetCols.map(c=>`
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" value="${c}" checked> ${c}
+                        </label>`).join('');
+                    document.getElementById('normalize-modal').style.display='flex';
+                } catch(e) { showNotification(e.message,'error'); }
+            }
+            function closeNormalizeModal() { document.getElementById('normalize-modal').style.display='none'; }
+            async function runNormalizeSelected() {
+                const dataset = document.getElementById('clean-dataset-select')?.value;
+                const cols = [...document.querySelectorAll('#normalize-col-list input:checked')].map(i=>i.value);
+                if (!cols.length) { showNotification('Select at least one column.','error'); return; }
+                closeNormalizeModal();
+                const resultDiv = document.getElementById('clean-result');
+                resultDiv.innerHTML='<p style="color:#64748b;">⏳ Normalizing...</p>';
+                try {
+                    const r = await fetch(`/api/dataset/${encodeURIComponent(dataset)}/clean`, {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({operations:[{type:'normalize', columns:cols}]})
+                    });
+                    const d = await r.json();
+                    resultDiv.innerHTML = d.success
+                        ? `<div style="background:#f0fdf4;padding:14px;border-radius:10px;color:#166534;">✅ ${d.logs?.join(' | ')}</div>`
+                        : `<p style="color:#dc2626;">❌ ${d.message}</p>`;
+                } catch(e) { resultDiv.innerHTML=`<p style="color:red;">${e.message}</p>`; }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // SUBMIT FOR APPROVAL
+            // ─────────────────────────────────────────────────────────────
+            async function submitForApproval() {
+                const dataset = document.getElementById('approval-dataset-select')?.value;
+                if (!dataset) { showNotification('Select a dataset first.','error'); return; }
+                try {
+                    const r = await fetch('/api/submit-for-approval', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({dataset_name:dataset})
+                    });
+                    const d = await r.json();
+                    document.getElementById('approval-result').innerHTML =
+                        `<div style="padding:12px;border-radius:10px;background:${d.success?'#f0fdf4':'#fee2e2'};color:${d.success?'#166534':'#dc2626'};">${d.message}</div>`;
+                } catch(e) { showNotification(e.message,'error'); }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // AI CHAT WIDGET
+            // ─────────────────────────────────────────────────────────────
+            let _chatOpen = false;
+            async function toggleChat() {
+                _chatOpen = !_chatOpen;
+                const panel = document.getElementById('chat-panel');
+                panel.style.display = _chatOpen ? 'block' : 'none';
+                if (_chatOpen) {
+                    await loadChatHistory();
+                    document.getElementById('chat-input')?.focus();
+                }
+            }
+
+            async function loadChatHistory() {
+                try {
+                    const r = await fetch('/api/chat/history');
+                    const d = await r.json();
+                    const msgs = d.history||[];
+                    const box  = document.getElementById('chat-messages');
+                    if (!box) return;
+                    if (!msgs.length) return;
+                    box.innerHTML = msgs.map(m=>`<div class="chat-msg ${m.role}">${escapeHtml(m.message)}</div>`).join('');
+                    box.scrollTop = box.scrollHeight;
+                } catch(e) { console.error('loadChatHistory',e); }
+            }
+
+            async function sendChatMessage() {
+                const input = document.getElementById('chat-input');
+                const msg = input?.value?.trim();
+                if (!msg) return;
+                input.value = '';
+
+                const box = document.getElementById('chat-messages');
+                box.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
+                box.innerHTML += `<div class="chat-msg assistant" id="chat-typing">🤔 Thinking...</div>`;
+                box.scrollTop = box.scrollHeight;
+
+                try {
+                    const r = await fetch('/api/chat', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({message:msg})
+                    });
+                    const d = await r.json();
+                    const typing = document.getElementById('chat-typing');
+                    if (typing) typing.remove();
+                    if (d.success) {
+                        box.innerHTML += `<div class="chat-msg assistant">${escapeHtml(d.response)}</div>`;
+                    } else {
+                        box.innerHTML += `<div class="chat-msg assistant" style="color:#dc2626;">Error: ${escapeHtml(d.message||'Unknown error')}</div>`;
+                    }
+                    box.scrollTop = box.scrollHeight;
+                } catch(e) {
+                    document.getElementById('chat-typing')?.remove();
+                    box.innerHTML += `<div class="chat-msg assistant" style="color:#dc2626;">Error: ${escapeHtml(e.message)}</div>`;
+                }
+            }
+
+            async function clearChat() {
+                try {
+                    await fetch('/api/chat/clear', {method:'POST', headers:{'Content-Type':'application/json'}});
+                    document.getElementById('chat-messages').innerHTML =
+                        '<div class="chat-msg assistant">Chat cleared! Ask me anything about forests and climate.</div>';
+                } catch(e) { console.error('clearChat',e); }
+            }
+
+            function escapeHtml(str) {
+                return String(str||'')
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // NOTIFICATIONS
+            // ─────────────────────────────────────────────────────────────
+            let _notifPanelOpen = false;
+            async function loadNotifications() {
+                try {
+                    const r = await fetch('/api/notifications');
+                    const d = await r.json();
+                    const notifs = d.notifications || [];
+                    const unread = d.unread || 0;
+                    const badge = document.getElementById('notif-badge');
+                    const list  = document.getElementById('notif-list');
+                    const countLabel = document.getElementById('notif-count-label');
+                    if (badge) {
+                        badge.textContent = unread > 9 ? '9+' : String(unread);
+                        badge.style.display = unread > 0 ? 'inline-block' : 'none';
+                    }
+                    if (countLabel) {
+                        countLabel.textContent = notifs.length ? `${notifs.length} total` : '';
+                        countLabel.style.display = notifs.length ? 'inline' : 'none';
+                    }
+                    if (list) {
+                        if (!notifs.length) {
+                            list.innerHTML = '<div style="text-align:center;padding:36px 16px;"><div style="font-size:2.5em;">🔔</div><p style="color:#94a3b8;margin-top:10px;font-size:0.9em;">No notifications yet</p></div>';
+                        } else {
+                            const typeBorder = {approved:'#06d6a0', rejected:'#ef476f', support:'#4361ee', info:'#94a3b8'};
+                            list.innerHTML = notifs.map(n => {
+                                const border = typeBorder[n.type] || '#e2e8f0';
+                                const bg     = !n.is_read ? '#eef5ff' : 'transparent';
+                                const dot    = !n.is_read
+                                    ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4361ee;margin-left:6px;vertical-align:middle;flex-shrink:0;"></span>'
+                                    : '';
+                                const time   = n.created_at
+                                    ? new Date(n.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
+                                    : '';
+                                return `<div style="padding:14px 18px 12px 16px;border-bottom:1px solid rgba(0,0,0,0.05);background:${bg};border-left:4px solid ${border};transition:background .15s;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <div style="font-weight:700;color:#1e293b;font-size:0.9em;line-height:1.3;flex:1;">${escapeHtml(n.title||'Notification')}</div>
+                                        ${dot}
+                                    </div>
+                                    <div style="color:#64748b;font-size:0.83em;margin-top:5px;line-height:1.5;">${escapeHtml(n.message||'')}</div>
+                                    <div style="color:#b0bec5;font-size:0.73em;margin-top:6px;">${time}</div>
+                                </div>`;
+                            }).join('');
+                        }
+                    }
+                } catch(e) { console.error('loadNotifications',e); }
+            }
+
+            function toggleNotifPanel() {
+                _notifPanelOpen = !_notifPanelOpen;
+                const overlay = document.getElementById('notif-overlay');
+                const panel   = document.getElementById('notif-panel');
+                if (_notifPanelOpen) {
+                    overlay.style.display = 'flex';
+                    // Trigger animation next frame
+                    requestAnimationFrame(() => {
+                        panel.style.transform = 'translateY(0) scale(1)';
+                        panel.style.opacity   = '1';
+                    });
+                    loadNotifications();
+                } else {
+                    panel.style.transform = 'translateY(-18px) scale(0.97)';
+                    panel.style.opacity   = '0';
+                    setTimeout(() => { overlay.style.display = 'none'; }, 220);
+                }
+            }
+
+            function handleNotifOverlayClick(e) {
+                if (e.target === document.getElementById('notif-overlay')) toggleNotifPanel();
+            }
+
+            async function markNotifsRead() {
+                try {
+                    await fetch('/api/notifications/mark-read', {method:'POST'});
+                    document.getElementById('notif-badge').style.display = 'none';
+                    await loadNotifications();
+                } catch(e) {}
+            }
+
+            // Close notif panel on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && _notifPanelOpen) toggleNotifPanel();
+            });
+
+            // ─────────────────────────────────────────────────────────────
+            // SUPPORT BUTTON
+            // ─────────────────────────────────────────────────────────────
+            let _supportOpen = false;
+            function toggleSupport() {
+                _supportOpen = !_supportOpen;
+                const modal = document.getElementById('support-modal');
+                modal.style.display = _supportOpen ? 'flex' : 'none';
+                if (_supportOpen) switchSupportTab('new');
+            }
+
+            function switchSupportTab(tab) {
+                const np = document.getElementById('support-new-panel');
+                const mp = document.getElementById('support-my-panel');
+                const tn = document.getElementById('support-tab-new');
+                const tm = document.getElementById('support-tab-my');
+                if (tab === 'new') {
+                    np.style.display='block'; mp.style.display='none';
+                    tn.style.background='#4361ee'; tm.style.background='#94a3b8';
+                } else {
+                    np.style.display='none'; mp.style.display='block';
+                    tn.style.background='#94a3b8'; tm.style.background='#4361ee';
+                    loadMyQueries();
+                }
+            }
+
+            function previewSupportScreenshot(input) {
+                const preview = document.getElementById('support-screenshot-preview');
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        preview.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #e2e8f0;">`;
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+            async function submitSupportQuery() {
+                const issueType = document.getElementById('support-issue-type')?.value;
+                const description = document.getElementById('support-description')?.value.trim();
+                const screenshot = document.getElementById('support-screenshot')?.files[0];
+                const resultDiv = document.getElementById('support-submit-result');
+                if (!issueType) { resultDiv.innerHTML = '<p style="color:#dc2626;">Please select an issue type.</p>'; return; }
+                const fd = new FormData();
+                fd.append('issue_type', issueType);
+                fd.append('description', description || '');
+                if (screenshot) fd.append('screenshot', screenshot);
+                try {
+                    resultDiv.innerHTML = '<p style="color:#64748b;">⏳ Submitting...</p>';
+                    const r = await fetch('/api/support/submit', {method:'POST', body:fd});
+                    const d = await r.json();
+                    resultDiv.innerHTML = `<div style="padding:10px;border-radius:8px;background:${d.success?'#f0fdf4':'#fee2e2'};color:${d.success?'#166534':'#dc2626'};">${escapeHtml(d.message)}</div>`;
+                    if (d.success) {
+                        document.getElementById('support-issue-type').value = '';
+                        document.getElementById('support-description').value = '';
+                        document.getElementById('support-screenshot').value = '';
+                        document.getElementById('support-screenshot-preview').innerHTML = '';
+                    }
+                } catch(e) {
+                    resultDiv.innerHTML = `<div style="padding:10px;border-radius:8px;background:#fee2e2;color:#dc2626;">${escapeHtml(e.message)}</div>`;
+                }
+            }
+
+            async function loadMyQueries() {
+                const container = document.getElementById('support-my-list');
+                container.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">Loading...</p>';
+                try {
+                    const r = await fetch('/api/user/my-support-queries');
+                    const d = await r.json();
+                    const queries = d.queries || [];
+                    if (!queries.length) {
+                        container.innerHTML = '<p style="text-align:center;color:#94a3b8;padding:20px;">No queries submitted yet.</p>';
+                        return;
+                    }
+                    const statusColors = {open:'#ff9e00', resolved:'#06d6a0'};
+                    container.innerHTML = queries.map(q => `
+                        <div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                                <span style="background:#e0e7ff;color:#4361ee;padding:3px 9px;border-radius:10px;font-size:0.82em;font-weight:600;">${escapeHtml(q.issue_type||'General')}</span>
+                                <span style="padding:3px 9px;border-radius:10px;background:${statusColors[q.status]||'#64748b'};color:#fff;font-size:0.78em;font-weight:600;">${q.status}</span>
+                            </div>
+                            <p style="color:#334155;font-size:0.88em;margin:6px 0;">${escapeHtml(q.description||'—')}</p>
+                            ${q.admin_response ? `<div style="background:#f0fdf4;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:0.85em;color:#166534;"><strong>Admin response:</strong> ${escapeHtml(q.admin_response)}</div>` : ''}
+                            <div style="color:#94a3b8;font-size:0.75em;margin-top:6px;">${q.created_at ? new Date(q.created_at).toLocaleDateString() : ''}</div>
+                        </div>`).join('');
+                } catch(e) {
+                    container.innerHTML = `<p style="color:#dc2626;">${escapeHtml(e.message)}</p>`;
+                }
+            }
+
+            // ─────────────────────────────────────────────────────────────
+            // GLOBAL LIBRARY TOGGLE (Data Tab)
+            // ─────────────────────────────────────────────────────────────
+            let _glibEnabled = false;
+
+            async function initGlobalLibraryToggle() {
+                try {
+                    const r = await fetch('/api/user/global-library/status');
+                    const d = await r.json();
+                    _glibEnabled = d.enabled !== false;
+                    updateGlibToggleUI();
+                    if (_glibEnabled) loadUserGlobalDatasets();
+                } catch(e) {}
+            }
+
+            function updateGlibToggleUI() {
+                const wrapper = document.getElementById('glib-toggle-wrapper');
+                const knob    = document.getElementById('glib-toggle-knob');
+                if (wrapper) wrapper.style.background = _glibEnabled ? '#4361ee' : '#cbd5e1';
+                if (knob)    knob.style.left           = _glibEnabled ? '25px'   : '3px';
+            }
+
+            async function toggleGlobalLibrary() {
+                _glibEnabled = !_glibEnabled;
+                updateGlibToggleUI();
+                try {
+                    const r = await fetch('/api/user/global-library/toggle', {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({enabled: _glibEnabled})
+                    });
+                    const d = await r.json();
+                    showNotification(d.message || 'Updated','info');
+                    if (_glibEnabled) {
+                        loadUserGlobalDatasets();
+                        await mergeGlobalDatasetsIntoSelects();
+                    } else {
+                        const c = document.getElementById('glib-user-container');
+                        if (c) c.innerHTML = '<p style="color:#94a3b8;font-size:0.9em;">Enable the toggle above to browse datasets shared by admin.</p>';
+                        // Remove global datasets from selectors
+                        ['prediction-dataset','chart-dataset','dataset-select'].forEach(id => {
+                            const sel = document.getElementById(id);
+                            if (!sel) return;
+                            Array.from(sel.options).forEach(o => {
+                                if (o.getAttribute('data-global')) sel.remove(o.index);
+                            });
+                        });
+                    }
+                } catch(e) { _glibEnabled = !_glibEnabled; updateGlibToggleUI(); }
+            }
+
+            async function mergeGlobalDatasetsIntoSelects() {
+                try {
+                    if (!_glibEnabled) return;
+                    const r = await fetch('/api/user/global-datasets');
+                    const d = await r.json();
+                    if (!d.enabled || !d.datasets || !d.datasets.length) return;
+                    const globalIds = ['prediction-dataset','chart-dataset','dataset-select'];
+                    globalIds.forEach(id => {
+                        const sel = document.getElementById(id);
+                        if (!sel) return;
+                        // Remove old global options first
+                        Array.from(sel.options).forEach((o,i) => {
+                            if (o.getAttribute('data-global')) sel.remove(i);
+                        });
+                        // Add separator + global datasets
+                        const sep = new Option('── Global Library ──', '');
+                        sep.disabled = true;
+                        sep.setAttribute('data-global', '1');
+                        sel.appendChild(sep);
+                        d.datasets.forEach(ds => {
+                            const opt = new Option(`🌍 ${ds.name} (${ds.row_count||0} rows)`, ds.name);
+                            opt.setAttribute('data-global', '1');
+                            sel.appendChild(opt);
+                        });
+                    });
+                } catch(e) { console.error('mergeGlobalDatasetsIntoSelects', e); }
+            }
+
+            async function loadUserGlobalDatasets() {
+                const container = document.getElementById('glib-user-container');
+                if (!container) return;
+                container.innerHTML = '<p style="color:#64748b;font-size:0.9em;">Loading global datasets...</p>';
+                try {
+                    const r = await fetch('/api/user/global-datasets');
+                    const d = await r.json();
+                    if (!d.enabled) {
+                        container.innerHTML = '<p style="color:#94a3b8;font-size:0.9em;">Enable the toggle above to browse datasets shared by admin.</p>';
+                        return;
+                    }
+                    const datasets = d.datasets || [];
+                    if (!datasets.length) {
+                        container.innerHTML = '<p style="color:#94a3b8;font-size:0.9em;">No global datasets available yet. Admin will add them soon.</p>';
+                        return;
+                    }
+                    container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;">
+                        ${datasets.map(ds => `
+                            <div style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#f8faff;">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                    <span style="font-size:1.4em;">🌍</span>
+                                    <strong style="color:#334155;font-size:0.95em;">${escapeHtml(ds.name)}</strong>
+                                </div>
+                                <p style="color:#64748b;font-size:0.82em;margin-bottom:8px;">${escapeHtml(ds.description||'Global dataset by admin')}</p>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+                                    ${(ds.tags||'').split(',').filter(t=>t.trim()).map(t=>`<span style="background:#e0e7ff;color:#4361ee;padding:2px 8px;border-radius:8px;font-size:0.78em;">${escapeHtml(t.trim())}</span>`).join('')}
+                                </div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <small style="color:#94a3b8;">${ds.row_count||0} rows · ${ds.column_count||0} cols</small>
+                                </div>
+                            </div>`).join('')}
+                    </div>`;
+                } catch(e) {
+                    container.innerHTML = `<p style="color:#dc2626;font-size:0.9em;">${escapeHtml(e.message)}</p>`;
+                }
+            }
+
+            // Poll notifications every 60s
+            setInterval(loadNotifications, 60000);
+            // Load notifications + global library toggle on startup (after session check)
+            setTimeout(() => {
+                loadNotifications();
+                initGlobalLibraryToggle();
+            }, 2000);
         </script>
 </body>
-
-                                </html>
+    </html>
