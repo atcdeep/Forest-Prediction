@@ -1,0 +1,6 @@
+{
+  "version": "v3.0",
+  "training_accuracy": 0.9970066518847006,
+  "validation_accuracy": 0.9925084175084176,
+  "samples_per_language": 3000
+}

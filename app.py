@@ -15,6 +15,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -30,6 +31,7 @@ import re
 import secrets
 import hashlib
 import math
+import requests
 from functools import wraps
 try:
     import openpyxl
@@ -40,6 +42,29 @@ except ImportError:
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # For session management
 CORS(app)
+
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '').strip()
+GROQ_MODEL = 'llama-3.3-70b-versatile'
+CHAT_LANGUAGE_CODES = {'hi': 'Hindi', 'en': 'English'}
+
+
+def _resolve_chat_language(preferred_language, preferred_label, message):
+    code = (preferred_language or '').strip().lower()
+    label = (preferred_label or '').strip().lower()
+    message_text = (message or '').strip()
+
+    if code in CHAT_LANGUAGE_CODES:
+        return code, CHAT_LANGUAGE_CODES[code]
+
+    if label in {'hindi', 'हिंदी', 'hi'}:
+        return 'hi', CHAT_LANGUAGE_CODES['hi']
+    if label in {'english', 'अंग्रेजी', 'en'}:
+        return 'en', CHAT_LANGUAGE_CODES['en']
+
+    if re.search(r'\b(hi|hindi|हिंदी)\b', message_text, re.IGNORECASE):
+        return 'hi', CHAT_LANGUAGE_CODES['hi']
+
+    return 'en', CHAT_LANGUAGE_CODES['en']
 
 # Database configuration - SQLite
 DB_PATH = 'forest_prediction.db'
@@ -434,6 +459,26 @@ def log_user_activity(user_id, activity_type, description, ip_address=None, user
 @app.route('/favicon.ico')
 def favicon():
     return send_file(os.path.join(app.static_folder, 'forest-predict-icon.png'), mimetype='image/png')
+
+# ── PWA Routes ────────────────────────────────────────────────────────────────
+@app.route('/sw.js')
+def service_worker():
+    """Serve service worker from root scope so it can control all pages."""
+    response = send_file(
+        os.path.join(app.static_folder, 'sw.js'),
+        mimetype='application/javascript'
+    )
+    response.headers['Service-Worker-Allowed'] = '/'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    return response
+
+@app.route('/manifest.json')
+def pwa_manifest():
+    """Serve manifest from root for PWA compatibility."""
+    return send_file(
+        os.path.join(app.static_folder, 'manifest.json'),
+        mimetype='application/manifest+json'
+    )
 
 @app.route('/')
 def index():
@@ -1403,7 +1448,7 @@ def make_prediction():
         filter_value = data.get('filter_value')
         model_name = data.get('model', 'linear_regression')
         poly_degree = int(data.get('degree', 2))
-        VALID_MODELS = {'linear_regression','random_forest','decision_tree','gradient_boosting','polynomial_regression'}
+        VALID_MODELS = {'linear_regression','random_forest','decision_tree','gradient_boosting','polynomial_regression','ann'}
         if model_name not in VALID_MODELS:
             model_name = 'linear_regression'
 
@@ -2318,6 +2363,18 @@ def build_model(model_name: str, degree: int = 2):
         return DecisionTreeRegressor(max_depth=6, random_state=42)
     elif model_name == 'gradient_boosting':
         return GradientBoostingRegressor(n_estimators=100, random_state=42)
+    elif model_name == 'ann':
+        return make_pipeline(
+            StandardScaler(),
+            MLPRegressor(
+                hidden_layer_sizes=(64, 32),
+                activation='relu',
+                solver='adam',
+                learning_rate_init=0.001,
+                max_iter=3000,
+                random_state=42
+            )
+        )
     elif model_name == 'polynomial_regression':
         return make_pipeline(PolynomialFeatures(degree=degree), LinearRegression())
     else:  # linear_regression (default)
@@ -2346,7 +2403,7 @@ def _fit_and_score(X, y, model_name='linear_regression', degree=2):
 @app.route('/api/predict/compare-models', methods=['POST'])
 @login_required
 def compare_models():
-    """Run all 5 models on the same data and return accuracy scores."""
+    """Run all available models on the same data and return accuracy scores."""
     try:
         data = request.get_json()
         dataset_name  = data.get('dataset')
@@ -2398,7 +2455,7 @@ def compare_models():
         y = df_clean[metric_col].values
 
         MODEL_NAMES = ['linear_regression', 'random_forest', 'decision_tree',
-                       'gradient_boosting', 'polynomial_regression']
+                   'gradient_boosting', 'polynomial_regression', 'ann']
         results = []
         best_accuracy = -1
         best_model_name = 'linear_regression'
@@ -2985,6 +3042,156 @@ def generate_insights():
 # =============================================================================
 # USER: AI Chat Assistant
 # =============================================================================
+def _get_recent_chat_context(user_id, limit=12):
+    """Get recent chat turns to send conversational context to Groq."""
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return []
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT role, message FROM chat_history
+            WHERE user_id=%s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (user_id, limit))
+        rows = cursor.fetchall() or []
+        cursor.close()
+        connection.close()
+        rows.reverse()
+        return rows
+    except Exception:
+        return []
+
+
+def _extract_groq_text(payload):
+    """Extract plain text from Groq/OpenAI-compatible response payload."""
+    try:
+        choices = payload.get('choices') or []
+        if not choices:
+            return ''
+        content = ((choices[0] or {}).get('message') or {}).get('content')
+        return (content or '').strip()
+    except Exception:
+        return ''
+
+
+def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
+    """Call Groq chat completion API and return (text_or_none, error_or_none)."""
+    if not GROQ_API_KEY:
+        return None, 'Groq API key not configured'
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens
+    }
+
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=payload,
+            timeout=35
+        )
+        if response.status_code != 200:
+            return None, f"Groq API error ({response.status_code})"
+        data = response.json()
+        text = _extract_groq_text(data)
+        if not text:
+            return None, 'No response text from Groq'
+        return text, None
+    except Exception as e:
+        return None, str(e)
+
+
+def _generate_groq_reply(user_id, user_message, mode='message', preferred_language=None, preferred_label=None):
+    """Generate Groq assistant response. Returns (text_or_none, error_or_none)."""
+    if not GROQ_API_KEY:
+        return None, 'Groq API key not configured'
+
+    recent_turns = _get_recent_chat_context(user_id, limit=10)
+    history_lines = []
+    for turn in recent_turns:
+        role = 'User' if (turn.get('role') == 'user') else 'Assistant'
+        message = (turn.get('message') or '').strip()
+        if message:
+            history_lines.append(f"{role}: {message}")
+    history_text = '\n'.join(history_lines[-10:]) if history_lines else '(no prior context)'
+
+    mode_hint = 'voice call mode' if mode == 'call' else 'text message mode'
+    supported_languages = 'Hindi, English'
+    preferred_language = (preferred_language or '').strip().lower()
+    preferred_label = (preferred_label or '').strip()
+    if preferred_language not in CHAT_LANGUAGE_CODES:
+        preferred_language = 'en'
+    preferred_name = CHAT_LANGUAGE_CODES.get(preferred_language, 'English')
+    force_language_line = ''
+    strict_language_clause = ''
+    if preferred_name:
+        force_language_line = (
+            f"IMPORTANT: UI selected language is '{preferred_name}' ({preferred_language}). "
+            f"Reply ONLY in {preferred_name}. Do not use any other language.\n"
+        )
+        strict_language_clause = (
+            f"You must answer strictly and directly in {preferred_name}. "
+            "Generate naturally in the selected language. "
+            "Never generate mixed-language sentences."
+        )
+
+    prompt = (
+        "You are Forest AI Assistant in the Forest Prediction web app.\n"
+        "Rules:\n"
+        "1) Always reply ONLY in the user's selected language from the UI.\n"
+        "2) Only two languages are allowed: Hindi and English.\n"
+        "3) Use natural grammar and common words used by native speakers.\n"
+        "4) Never mix languages in one sentence.\n"
+        "5) If selected language is Hindi, answer fully in Hindi; if English, fully in English.\n"
+        f"6) Supported languages: {supported_languages}.\n"
+        "7) Reply only to what user asked. Do not add unrelated details unless requested.\n"
+        f"8) Current interaction mode: {mode_hint}.\n\n"
+        f"{force_language_line}"
+        f"Recent conversation:\n{history_text}\n\n"
+        f"Latest user message:\n{user_message}"
+    )
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a multilingual AI assistant for forest prediction users. "
+                "Keep answers exact and concise. Answer only what is asked. "
+                + strict_language_clause
+            ).strip()
+        },
+        {"role": "user", "content": prompt}
+    ]
+    text, err = _call_groq_chat(messages, temperature=0.45, max_tokens=1024)
+    if err or not text:
+        return None, err or 'No response text from Groq'
+
+    if preferred_name and preferred_language in ('hi', 'en'):
+        rewrite_prompt = (
+            f"Rewrite the following answer strictly in {preferred_name} only. "
+            "Do not use any other language. Keep same meaning and concise style.\n\n"
+            f"Answer:\n{text}"
+        )
+        rewritten, rewrite_err = _call_groq_chat(
+            [{"role": "user", "content": rewrite_prompt}],
+            temperature=0.2,
+            max_tokens=1024
+        )
+        if not rewrite_err and rewritten:
+            text = rewritten
+
+    return text, None
+
+
 @app.route('/api/chat', methods=['POST'])
 @login_required
 def ai_chat():
@@ -2993,6 +3200,17 @@ def ai_chat():
         user_id = get_current_user_id()
         data = request.get_json()
         message = (data.get('message') or '').strip()
+        mode = (data.get('mode') or 'message').strip().lower()
+        preferred_language = (data.get('preferred_language') or '').strip().lower()
+        preferred_label = (data.get('preferred_label') or '').strip()
+        if mode not in ('message', 'call'):
+            mode = 'message'
+
+        preferred_language, preferred_label = _resolve_chat_language(
+            preferred_language,
+            preferred_label,
+            message
+        )
 
         if not message:
             return jsonify({'success': False, 'message': 'Message required'})
@@ -3012,6 +3230,24 @@ def ai_chat():
                 cursor.close(); connection.close()
         except Exception:
             pass
+
+        groq_response, groq_error = _generate_groq_reply(
+            user_id,
+            message,
+            mode,
+            preferred_language=preferred_language,
+            preferred_label=preferred_label
+        )
+        if groq_response:
+            response = groq_response
+            connection = get_db_connection()
+            if connection:
+                cursor = connection.cursor()
+                cursor.execute("INSERT INTO chat_history (user_id, role, message) VALUES (%s,'assistant',%s)",
+                               (user_id, response))
+                connection.commit()
+                cursor.close(); connection.close()
+            return jsonify({'success': True, 'response': response, 'provider': 'groq'})
 
         # ── Rich knowledge base ──────────────────────────────────────────
         def _contains(words):
@@ -3358,7 +3594,7 @@ def ai_chat():
             connection.commit()
             cursor.close(); connection.close()
 
-        return jsonify({'success': True, 'response': response})
+        return jsonify({'success': True, 'response': response, 'provider': 'fallback', 'fallback_reason': groq_error})
 
     except Exception as e:
         traceback.print_exc()

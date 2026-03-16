@@ -1,9 +1,10 @@
 Flask
 flask-cors
 gunicorn
-mysql-connector-python
 pandas
 numpy
 scikit-learn
 openpyxl
 python-dotenv
+Pillow
+requests
