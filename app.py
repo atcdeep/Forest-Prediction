@@ -34,6 +34,10 @@ import math
 import requests
 from functools import wraps
 try:
+    from dotenv import load_dotenv
+except Exception:
+    load_dotenv = None
+try:
     import openpyxl
     EXCEL_AVAILABLE = True
 except ImportError:
@@ -43,7 +47,18 @@ app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)  # For session management
 CORS(app)
 
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '').strip()
+if load_dotenv:
+    load_dotenv()
+
+
+def _get_groq_api_key() -> str:
+    return (
+        os.getenv('GROQ_API_KEY', '').strip()
+        or os.getenv('GROQ_API_TOKEN', '').strip()
+    )
+
+
+GROQ_API_KEY = _get_groq_api_key()
 GROQ_MODEL = 'llama-3.3-70b-versatile'
 CHAT_LANGUAGE_CODES = {'hi': 'Hindi', 'en': 'English'}
 
@@ -3078,7 +3093,8 @@ def _extract_groq_text(payload):
 
 def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
     """Call Groq chat completion API and return (text_or_none, error_or_none)."""
-    if not GROQ_API_KEY:
+    api_key = _get_groq_api_key()
+    if not api_key:
         return None, 'Groq API key not configured'
 
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -3093,7 +3109,7 @@ def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
         response = requests.post(
             url,
             headers={
-                "Authorization": f"Bearer {GROQ_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             },
             json=payload,
@@ -3112,7 +3128,7 @@ def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
 
 def _generate_groq_reply(user_id, user_message, mode='message', preferred_language=None, preferred_label=None):
     """Generate Groq assistant response. Returns (text_or_none, error_or_none)."""
-    if not GROQ_API_KEY:
+    if not _get_groq_api_key():
         return None, 'Groq API key not configured'
 
     recent_turns = _get_recent_chat_context(user_id, limit=10)
