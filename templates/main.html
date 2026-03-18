@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ForestPredict · main dashboard</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='forest-predict-icon.png') }}">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2ecc71">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ForestPredict">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <!-- Android PWA Support -->
+    <meta name="mobile-web-app-capable" content="yes">
     <!-- Font Awesome 6 (free) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -1059,6 +1069,98 @@
             background: linear-gradient(#2ecc71, #f1c40f);
             border-radius: 8px;
         }
+
+        /* ===== LANGUAGE SWITCHER ===== */
+        .lang-float {
+            position: fixed;
+            top: 18px;
+            right: 18px;
+            z-index: 9998;
+        }
+        .lang-switcher-btn {
+            background: linear-gradient(135deg,#2ecc71,#1a7a47);
+            border: none;
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 16px rgba(46,204,113,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .lang-switcher-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(46,204,113,0.5); }
+        .lang-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #0f2a1e;
+            border: 1px solid rgba(46,204,113,0.25);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            z-index: 9999;
+            min-width: 230px;
+            max-height: 440px;
+            overflow-y: auto;
+            padding: 8px 0;
+            animation: fadeInDown 0.2s ease;
+        }
+        .lang-dropdown.open { display: block; }
+        @keyframes fadeInDown {
+            from { opacity:0; transform:translateY(-8px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        .lang-dropdown-header {
+            padding: 10px 18px 8px;
+            font-size: 0.78em;
+            font-weight: 700;
+            color: #7befb2;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid rgba(46,204,113,0.15);
+            margin-bottom: 4px;
+        }
+        .lang-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-size: 0.93em;
+            color: #c8e6c9;
+            transition: background 0.15s;
+            font-weight: 500;
+        }
+        .lang-item:hover { background: rgba(46,204,113,0.12); }
+        .lang-item.active { background: rgba(46,204,113,0.2); color: #7befb2; font-weight: 700; }
+        .lang-item .lang-native { color: #4caf50; font-size: 0.82em; }
+
+        /* Hide Google Translate toolbar */
+        .goog-te-banner-frame, .goog-te-balloon-frame,
+        #goog-gt-tt, .goog-te-bubble-iframe,
+        .goog-te-ftab-float { display: none !important; }
+        body { top: 0 !important; }
+        .skiptranslate { display: none !important; }
+        #google_translate_element { display: none !important; }
+        body.lang-changing::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 99999;
+            pointer-events: all;
+        }
+        body.lang-changing > * {
+            opacity: 0.45;
+            transition: opacity 0.25s ease;
+        }
     </style>
 </head>
 
@@ -1069,6 +1171,39 @@
     <div class="nature-particle" style="top: 15%; right: 1%; font-size: 3rem;"><i class="fas fa-tree"></i></div>
     <div class="nature-particle" style="bottom: 10%; left: 8%;"><i class="fas fa-seedling"></i></div>
     <div class="nature-particle" style="bottom: 25%; right: 6%;"><i class="fas fa-cloud-sun"></i></div>
+
+    <!-- Language Switcher (floating top-right) -->
+    <div class="lang-float" id="langSwitcherWrap">
+        <button class="lang-switcher-btn" onclick="toggleLangDropdown()" id="langBtn" title="Change Language">
+            🌐 <span id="langBtnLabel">Language</span> ▾
+        </button>
+        <div class="lang-dropdown" id="langDropdown">
+            <div class="lang-dropdown-header">🇮🇳 Select Language</div>
+            <div class="lang-item active" onclick="selectLang('en','English','English')" data-lang="en">🇬🇧 <span>English</span></div>
+            <div class="lang-item" onclick="selectLang('hi','हिंदी','Hindi')" data-lang="hi">🇮🇳 <span>हिंदी</span> <span class="lang-native">Hindi</span></div>
+            <div class="lang-item" onclick="selectLang('as','অসমীয়া','Assamese')" data-lang="as">🇮🇳 <span>অসমীয়া</span> <span class="lang-native">Assamese</span></div>
+            <div class="lang-item" onclick="selectLang('bn','বাংলা','Bengali')" data-lang="bn">🇮🇳 <span>বাংলা</span> <span class="lang-native">Bengali</span></div>
+            <div class="lang-item" onclick="selectLang('brx','बड़ो','Bodo')" data-lang="brx">🇮🇳 <span>बड़ो</span> <span class="lang-native">Bodo</span></div>
+            <div class="lang-item" onclick="selectLang('doi','डोगरी','Dogri')" data-lang="doi">🇮🇳 <span>डोगरी</span> <span class="lang-native">Dogri</span></div>
+            <div class="lang-item" onclick="selectLang('gu','ગુજરાતી','Gujarati')" data-lang="gu">🇮🇳 <span>ગુજરાતી</span> <span class="lang-native">Gujarati</span></div>
+            <div class="lang-item" onclick="selectLang('kn','ಕನ್ನಡ','Kannada')" data-lang="kn">🇮🇳 <span>ಕನ್ನಡ</span> <span class="lang-native">Kannada</span></div>
+            <div class="lang-item" onclick="selectLang('ks','کٲشُر','Kashmiri')" data-lang="ks">🇮🇳 <span>کٲشُر</span> <span class="lang-native">Kashmiri</span></div>
+            <div class="lang-item" onclick="selectLang('gom','कोंकणी','Konkani')" data-lang="gom">🇮🇳 <span>कोंकणी</span> <span class="lang-native">Konkani</span></div>
+            <div class="lang-item" onclick="selectLang('mai','मैथिली','Maithili')" data-lang="mai">🇮🇳 <span>मैथिली</span> <span class="lang-native">Maithili</span></div>
+            <div class="lang-item" onclick="selectLang('ml','മലയാളം','Malayalam')" data-lang="ml">🇮🇳 <span>മലയാളം</span> <span class="lang-native">Malayalam</span></div>
+            <div class="lang-item" onclick="selectLang('mni','মেইতেই','Manipuri')" data-lang="mni">🇮🇳 <span>মেইতেই</span> <span class="lang-native">Manipuri</span></div>
+            <div class="lang-item" onclick="selectLang('mr','मराठी','Marathi')" data-lang="mr">🇮🇳 <span>मराठी</span> <span class="lang-native">Marathi</span></div>
+            <div class="lang-item" onclick="selectLang('ne','नेपाली','Nepali')" data-lang="ne">🇮🇳 <span>नेपाली</span> <span class="lang-native">Nepali</span></div>
+            <div class="lang-item" onclick="selectLang('or','ଓଡ଼ିଆ','Odia')" data-lang="or">🇮🇳 <span>ଓଡ଼ିଆ</span> <span class="lang-native">Odia</span></div>
+            <div class="lang-item" onclick="selectLang('pa','ਪੰਜਾਬੀ','Punjabi')" data-lang="pa">🇮🇳 <span>ਪੰਜਾਬੀ</span> <span class="lang-native">Punjabi</span></div>
+            <div class="lang-item" onclick="selectLang('sa','संस्कृतम्','Sanskrit')" data-lang="sa">🇮🇳 <span>संस्कृतम्</span> <span class="lang-native">Sanskrit</span></div>
+            <div class="lang-item" onclick="selectLang('sat','ᱥᱟᱱᱛᱟᱲᱤ','Santali')" data-lang="sat">🇮🇳 <span>ᱥᱟᱱᱛᱟᱲᱤ</span> <span class="lang-native">Santali</span></div>
+            <div class="lang-item" onclick="selectLang('sd','سنڌي','Sindhi')" data-lang="sd">🇮🇳 <span>سنڌي</span> <span class="lang-native">Sindhi</span></div>
+            <div class="lang-item" onclick="selectLang('ta','தமிழ்','Tamil')" data-lang="ta">🇮🇳 <span>தமிழ்</span> <span class="lang-native">Tamil</span></div>
+            <div class="lang-item" onclick="selectLang('te','తెలుగు','Telugu')" data-lang="te">🇮🇳 <span>తెలుగు</span> <span class="lang-native">Telugu</span></div>
+            <div class="lang-item" onclick="selectLang('ur','اردو','Urdu')" data-lang="ur">🇮🇳 <span>اردو</span> <span class="lang-native">Urdu</span></div>
+        </div>
+    </div>
 
     <!-- MODAL overlay (full transparent page) -->
     <div id="featureModal" class="modal-overlay">
@@ -1292,6 +1427,87 @@
             styleSheet.textContent = `@keyframes rippleFx { to { transform: scale(4); opacity: 0; } }`;
             document.head.appendChild(styleSheet);
         })();
+    </script>
+
+    <!-- Google Translate (hidden - controlled via custom UI) -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'as,bn,brx,doi,gu,hi,kn,ks,gom,mai,ml,mni,mr,ne,or,pa,sa,sat,sd,ta,te,ur',
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+
+        function toggleLangDropdown() {
+            document.getElementById('langDropdown').classList.toggle('open');
+        }
+
+        function runLangTransition(durationMs = 2200) {
+            document.body.classList.add('lang-changing');
+            setTimeout(() => document.body.classList.remove('lang-changing'), durationMs);
+        }
+
+        function selectLang(code, nativeLabel, englishLabel, triggerEffect = true) {
+            document.getElementById('langBtnLabel').textContent = nativeLabel || englishLabel;
+            document.querySelectorAll('.lang-item').forEach(el => el.classList.remove('active'));
+            const active = document.querySelector('.lang-item[data-lang="' + code + '"]');
+            if (active) active.classList.add('active');
+            document.getElementById('langDropdown').classList.remove('open');
+            localStorage.setItem('fp_lang', code);
+            localStorage.setItem('fp_lang_label', nativeLabel || englishLabel);
+
+            if (code === 'en') {
+                if (triggerEffect) runLangTransition(650);
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + location.hostname;
+                setTimeout(() => location.reload(), 180);
+                return;
+            }
+            if (triggerEffect) runLangTransition(2200);
+            const tryApply = (n) => {
+                const sel = document.querySelector('.goog-te-combo');
+                if (sel) {
+                    sel.value = code;
+                    sel.dispatchEvent(new Event('change'));
+                } else if (n > 0) {
+                    setTimeout(() => tryApply(n - 1), 400);
+                }
+            };
+            tryApply(20);
+        }
+
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('langSwitcherWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                const dd = document.getElementById('langDropdown');
+                if (dd) dd.classList.remove('open');
+            }
+        });
+
+        window.addEventListener('load', function() {
+            const savedCode  = localStorage.getItem('fp_lang');
+            const savedLabel = localStorage.getItem('fp_lang_label');
+            if (savedCode && savedCode !== 'en') {
+                if (savedLabel) document.getElementById('langBtnLabel').textContent = savedLabel;
+                const active = document.querySelector('.lang-item[data-lang="' + savedCode + '"]');
+                if (active) { document.querySelectorAll('.lang-item').forEach(el => el.classList.remove('active')); active.classList.add('active'); }
+                setTimeout(() => selectLang(savedCode, savedLabel, savedLabel, false), 1800);
+            }
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('ForestPredict SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
     </script>
 </body>
 

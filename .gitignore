@@ -1,0 +1,25 @@
+# Python
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Environment
+
+.env
+.env.*
+!.env.example
+
+uploads/
+
+# Virtual env
+
+venv/
+.venv/
+
+# OS
+
+.DS_Store
+Thumbs.db

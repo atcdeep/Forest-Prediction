@@ -6,6 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forest Data Analysis & Prediction System</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='forest-predict-icon.png') }}">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2ecc71">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ForestPredict">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <!-- Android PWA Support -->
+    <meta name="mobile-web-app-capable" content="yes">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <!-- Leaflet Map -->
@@ -122,7 +132,7 @@
             box-shadow: var(--shadow);
             margin-bottom: 40px;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -205,6 +215,108 @@
 
         .logout-btn i {
             font-size: 1.2em;
+        }
+
+        .theme-toggle-btn {
+            background: rgba(67, 97, 238, 0.12);
+            color: #1e293b;
+            border: 1px solid rgba(67, 97, 238, 0.35);
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+        }
+
+        .theme-toggle-btn:hover {
+            transform: translateY(-2px);
+            background: rgba(67, 97, 238, 0.2);
+        }
+
+        body.dark-mode {
+            --glass-bg: rgba(15, 23, 42, 0.82);
+            --glass-border: rgba(148, 163, 184, 0.22);
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+            --dark: #f8fafc;
+            --light: #0f172a;
+            background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .header,
+        body.dark-mode .card,
+        body.dark-mode .chart-card,
+        body.dark-mode .pred-mode-card,
+        body.dark-mode #prediction-map-card,
+        body.dark-mode .table-wrapper {
+            background: var(--glass-bg);
+            border-color: var(--glass-border);
+        }
+
+        body.dark-mode .header-content p,
+        body.dark-mode .user-email,
+        body.dark-mode .form-group label,
+        body.dark-mode .feature-text,
+        body.dark-mode .card p,
+        body.dark-mode .pred-mode-card p {
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .card h3,
+        body.dark-mode .pred-mode-card h5,
+        body.dark-mode .user-name,
+        body.dark-mode .lang-item {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode input,
+        body.dark-mode select,
+        body.dark-mode textarea {
+            background: #0f172a;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .theme-toggle-btn {
+            background: rgba(148, 163, 184, 0.16);
+            border-color: rgba(148, 163, 184, 0.38);
+            color: #f8fafc;
+        }
+
+        body.dark-mode .lang-dropdown.open {
+            background: rgba(2, 6, 23, 0.72);
+        }
+
+        body.dark-mode .lang-dropdown.open .lang-dropdown-header {
+            background: rgba(15, 23, 42, 0.94);
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+
+        body.dark-mode .lang-dropdown.open .lang-item {
+            background: rgba(15, 23, 42, 0.9);
+            border-color: #334155;
+            color: #e2e8f0;
+            box-shadow: 0 10px 24px rgba(2, 6, 23, 0.45);
+        }
+
+        body.dark-mode .lang-dropdown.open .lang-item:hover {
+            background: rgba(30, 41, 59, 0.94);
+        }
+
+        body.dark-mode .lang-dropdown.open .lang-item.active {
+            background: rgba(67, 97, 238, 0.3);
+            border-color: rgba(99, 102, 241, 0.55);
+            color: #dbeafe;
+        }
+
+        body.dark-mode .lang-dropdown.open .lang-item .lang-native {
+            color: #cbd5e1;
         }
 
         @keyframes shimmer {
@@ -968,6 +1080,256 @@
         .pred-mode-card.selected h5 {
             color: var(--primary);
         }
+
+        /* ===== PREDICTION + DATA THEME FIXES ===== */
+        #predict .prediction-step {
+            border: 1px solid rgba(67, 97, 238, 0.14);
+        }
+
+        #prediction-result table td,
+        #prediction-result table th {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        #data .data-table,
+        #data #datasets-management,
+        #data .file-upload {
+            transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+        }
+
+        body.dark-mode #predict .prediction-step {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border: 1px solid #334155;
+        }
+
+        body.dark-mode #predict .prediction-step h4 {
+            color: #93c5fd !important;
+        }
+
+        body.dark-mode #prediction-result > div {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border-color: #334155 !important;
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode #prediction-result p,
+        body.dark-mode #prediction-result strong,
+        body.dark-mode #prediction-result td,
+        body.dark-mode #prediction-result th,
+        body.dark-mode #prediction-result h4 {
+            color: #e2e8f0 !important;
+        }
+
+        body.dark-mode #prediction-result table td,
+        body.dark-mode #prediction-result table th {
+            border-bottom-color: #334155 !important;
+        }
+
+        body.dark-mode #prediction-result tr {
+            background: transparent !important;
+        }
+
+        body.dark-mode #prediction-result tbody tr:nth-child(even) {
+            background: rgba(30, 41, 59, 0.55) !important;
+        }
+
+        body.dark-mode #prediction-result [style*="background:#fff"],
+        body.dark-mode #prediction-result [style*="background: #fff"] {
+            background: #0f172a !important;
+            box-shadow: 0 2px 10px rgba(2, 6, 23, 0.45) !important;
+        }
+
+        body.dark-mode #prediction-result [style*="color:#64748b"],
+        body.dark-mode #prediction-result [style*="color: #64748b"],
+        body.dark-mode #prediction-result [style*="color:#334155"],
+        body.dark-mode #prediction-result [style*="color: #334155"] {
+            color: #cbd5e1 !important;
+        }
+
+        body.dark-mode #data .data-table,
+        body.dark-mode #data #datasets-management,
+        body.dark-mode #data .file-upload {
+            background: rgba(15, 23, 42, 0.72) !important;
+            border-color: #334155 !important;
+        }
+
+        body.dark-mode #data .file-upload:hover {
+            background: rgba(30, 41, 59, 0.72) !important;
+            border-color: #60a5fa !important;
+        }
+
+        body.dark-mode #data table td {
+            color: #e2e8f0;
+            border-bottom-color: #334155;
+        }
+
+        body.dark-mode #data tr:hover td {
+            background: rgba(67, 97, 238, 0.16);
+        }
+
+        body.dark-mode #data [style*="background: #f8f9fa"] {
+            background: rgba(15, 23, 42, 0.72) !important;
+        }
+
+        body.dark-mode #data [style*="background: #e3f2fd"] {
+            background: rgba(30, 64, 175, 0.18) !important;
+        }
+
+        body.dark-mode #data [style*="background-color: #f0f0f0"] {
+            background-color: rgba(30, 41, 59, 0.72) !important;
+        }
+
+        body.dark-mode #data [style*="color: #888"],
+        body.dark-mode #data [style*="color: #666"],
+        body.dark-mode #data [style*="color: #64748b"],
+        body.dark-mode #data [style*="color:#64748b"],
+        body.dark-mode #data [style*="color: #1976d2"] {
+            color: #cbd5e1 !important;
+        }
+
+        /* ===== LANGUAGE SWITCHER ===== */
+        .lang-switcher-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            z-index: 10001;
+        }
+        .lang-switcher-btn {
+            background: linear-gradient(135deg,#4361ee,#7c3aed);
+            border: none;
+            color: #fff;
+            padding: 9px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.88em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 3px 12px rgba(67,97,238,0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .lang-switcher-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(67,97,238,0.45); }
+        .lang-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+            border: 1px solid rgba(67,97,238,0.12);
+            z-index: 9999;
+            min-width: 220px;
+            max-height: 420px;
+            overflow-y: auto;
+            padding: 8px 0;
+            animation: fadeInDown 0.2s ease;
+        }
+        .lang-dropdown.open { display: block; }
+        body.lang-menu-open { overflow: hidden; }
+        .lang-dropdown.open {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            max-height: 100vh;
+            border-radius: 0;
+            border: none;
+            box-shadow: none;
+            background: rgba(15, 23, 42, 0.58);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 100050;
+            padding: 24px 14px 28px;
+        }
+        .lang-dropdown.open .lang-dropdown-header,
+        .lang-dropdown.open .lang-item {
+            width: min(760px, 95vw);
+            max-width: 760px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .lang-dropdown.open .lang-dropdown-header {
+            background: rgba(255,255,255,0.95);
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+            color: #334155;
+        }
+        .lang-dropdown.open .lang-item {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        @keyframes fadeInDown {
+            from { opacity:0; transform:translateY(-8px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        .lang-dropdown-header {
+            padding: 10px 18px 8px;
+            font-size: 0.78em;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 4px;
+        }
+        .lang-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-size: 0.93em;
+            color: #334155;
+            transition: background 0.15s;
+            font-weight: 500;
+        }
+        .lang-item:hover { background: #f0f4ff; }
+        .lang-item.active { background: #eef2ff; color: #4361ee; font-weight: 700; }
+        .lang-item .lang-native { color: #64748b; font-size: 0.82em; }
+
+        /* Hide Google Translate toolbar */
+        .goog-te-banner-frame, .goog-te-balloon-frame,
+        #goog-gt-tt, .goog-te-bubble-iframe,
+        .goog-te-ftab-float { display: none !important; }
+        body { top: 0 !important; }
+        .skiptranslate { display: none !important; }
+        #google_translate_element { display: none !important; }
+        body.lang-changing::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.28);
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            z-index: 99999;
+            pointer-events: all;
+        }
+        body.lang-changing > * {
+            opacity: 0.45;
+            transition: opacity 0.25s ease;
+        }
+        body.dark-mode.lang-changing::after {
+            background: rgba(2, 6, 23, 0.36);
+        }
+        body.dark-mode.lang-changing > * {
+            opacity: 0.8;
+        }
+        body.lang-menu-open::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.22);
+            backdrop-filter: blur(1.5px);
+            -webkit-backdrop-filter: blur(1.5px);
+            z-index: 9998;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -994,6 +1356,43 @@
                     <div class="user-name" id="userName">Loading...</div>
                     <div class="user-email" id="userEmail"></div>
                 </div>
+                <button class="theme-toggle-btn" onclick="toggleThemeMode()" id="themeToggleBtn" title="Toggle theme">
+                    <span id="themeBtnIcon">☀️</span>
+                    <span id="themeBtnLabel">Light Mode</span>
+                </button>
+                <!-- Language Switcher -->
+                <div class="lang-switcher-wrap" id="langSwitcherWrap">
+                    <button class="lang-switcher-btn" onclick="toggleLangDropdown()" id="langBtn" title="Change Language">
+                        🌐 <span id="langBtnLabel">Language</span> ▾
+                    </button>
+                    <div class="lang-dropdown" id="langDropdown">
+                        <div class="lang-dropdown-header">🇮🇳 Select Language</div>
+                        <div class="lang-item active" onclick="selectLang('en','English','English')" data-lang="en">🇬🇧 <span>English</span></div>
+                        <div class="lang-item" onclick="selectLang('hi','हिंदी','Hindi')" data-lang="hi">🇮🇳 <span>हिंदी</span> <span class="lang-native">Hindi</span></div>
+                        <div class="lang-item" onclick="selectLang('as','অসমীয়া','Assamese')" data-lang="as">🇮🇳 <span>অসমীয়া</span> <span class="lang-native">Assamese</span></div>
+                        <div class="lang-item" onclick="selectLang('bn','বাংলা','Bengali')" data-lang="bn">🇮🇳 <span>বাংলা</span> <span class="lang-native">Bengali</span></div>
+                        <div class="lang-item" onclick="selectLang('brx','बड़ो','Bodo')" data-lang="brx">🇮🇳 <span>बड़ो</span> <span class="lang-native">Bodo</span></div>
+                        <div class="lang-item" onclick="selectLang('doi','डोगरी','Dogri')" data-lang="doi">🇮🇳 <span>डोगरी</span> <span class="lang-native">Dogri</span></div>
+                        <div class="lang-item" onclick="selectLang('gu','ગુજરાતી','Gujarati')" data-lang="gu">🇮🇳 <span>ગુજરાતી</span> <span class="lang-native">Gujarati</span></div>
+                        <div class="lang-item" onclick="selectLang('kn','ಕನ್ನಡ','Kannada')" data-lang="kn">🇮🇳 <span>ಕನ್ನಡ</span> <span class="lang-native">Kannada</span></div>
+                        <div class="lang-item" onclick="selectLang('ks','کٲشُر','Kashmiri')" data-lang="ks">🇮🇳 <span>کٲشُر</span> <span class="lang-native">Kashmiri</span></div>
+                        <div class="lang-item" onclick="selectLang('gom','कोंकणी','Konkani')" data-lang="gom">🇮🇳 <span>कोंकणी</span> <span class="lang-native">Konkani</span></div>
+                        <div class="lang-item" onclick="selectLang('mai','मैथिली','Maithili')" data-lang="mai">🇮🇳 <span>मैथिली</span> <span class="lang-native">Maithili</span></div>
+                        <div class="lang-item" onclick="selectLang('ml','മലയാളം','Malayalam')" data-lang="ml">🇮🇳 <span>മലയാളം</span> <span class="lang-native">Malayalam</span></div>
+                        <div class="lang-item" onclick="selectLang('mni','মেইতেই','Manipuri')" data-lang="mni">🇮🇳 <span>মেইতেই</span> <span class="lang-native">Manipuri</span></div>
+                        <div class="lang-item" onclick="selectLang('mr','मराठी','Marathi')" data-lang="mr">🇮🇳 <span>मराठी</span> <span class="lang-native">Marathi</span></div>
+                        <div class="lang-item" onclick="selectLang('ne','नेपाली','Nepali')" data-lang="ne">🇮🇳 <span>नेपाली</span> <span class="lang-native">Nepali</span></div>
+                        <div class="lang-item" onclick="selectLang('or','ଓଡ଼ିଆ','Odia')" data-lang="or">🇮🇳 <span>ଓଡ଼ିଆ</span> <span class="lang-native">Odia</span></div>
+                        <div class="lang-item" onclick="selectLang('pa','ਪੰਜਾਬੀ','Punjabi')" data-lang="pa">🇮🇳 <span>ਪੰਜਾਬੀ</span> <span class="lang-native">Punjabi</span></div>
+                        <div class="lang-item" onclick="selectLang('sa','संस्कृतम्','Sanskrit')" data-lang="sa">🇮🇳 <span>संस्कृतम्</span> <span class="lang-native">Sanskrit</span></div>
+                        <div class="lang-item" onclick="selectLang('sat','ᱥᱟᱱᱛᱟᱲᱤ','Santali')" data-lang="sat">🇮🇳 <span>ᱥᱟᱱᱛᱟᱲᱤ</span> <span class="lang-native">Santali</span></div>
+                        <div class="lang-item" onclick="selectLang('sd','سنڌي','Sindhi')" data-lang="sd">🇮🇳 <span>سنڌي</span> <span class="lang-native">Sindhi</span></div>
+                        <div class="lang-item" onclick="selectLang('ta','தமிழ்','Tamil')" data-lang="ta">🇮🇳 <span>தமிழ்</span> <span class="lang-native">Tamil</span></div>
+                        <div class="lang-item" onclick="selectLang('te','తెలుగు','Telugu')" data-lang="te">🇮🇳 <span>తెలుగు</span> <span class="lang-native">Telugu</span></div>
+                        <div class="lang-item" onclick="selectLang('ur','اردو','Urdu')" data-lang="ur">🇮🇳 <span>اردو</span> <span class="lang-native">Urdu</span></div>
+                    </div>
+                </div>
+
                 <button class="logout-btn" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i>
                     Logout
@@ -1183,6 +1582,7 @@
                                 <option value="random_forest">🌳 Random Forest (Robust)</option>
                                 <option value="decision_tree">🌿 Decision Tree (Interpretable)</option>
                                 <option value="gradient_boosting">🚀 Gradient Boosting (Accurate)</option>
+                                <option value="ann">🧠 ANN (Neural Network)</option>
                             </select>
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -1213,6 +1613,7 @@
                                 <option value="random_forest">🌳 Random Forest (Robust)</option>
                                 <option value="decision_tree">🌿 Decision Tree (Interpretable)</option>
                                 <option value="gradient_boosting">🚀 Gradient Boosting (Accurate)</option>
+                                <option value="ann">🧠 ANN (Neural Network)</option>
                             </select>
                         </div>
                         <div style="display: flex; gap: 10px;">
@@ -1402,6 +1803,26 @@
                 transition: all 0.3s ease;
             }
 
+            .contact-avatar {
+                width: 170px;
+                height: 170px;
+                border-radius: 20px;
+                object-fit: cover;
+                border: 4px solid rgba(255, 255, 255, 0.9);
+                box-shadow: 0 10px 28px rgba(67, 97, 238, 0.22);
+                flex-shrink: 0;
+            }
+
+            .student-avatar {
+                width: 110px;
+                height: 110px;
+                border-radius: 16px;
+                object-fit: cover;
+                border: 3px solid rgba(255, 255, 255, 0.9);
+                box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+                flex-shrink: 0;
+            }
+
             .contact-card:hover {
                 transform: translateY(-5px);
                 box-shadow: 0 10px 30px rgba(67, 97, 238, 0.15);
@@ -1414,6 +1835,55 @@
             .student-card:hover {
                 transform: translateY(-8px);
                 box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            }
+
+            body.dark-mode #contact .contact-card,
+            body.dark-mode #contact .student-card {
+                background: rgba(15, 23, 42, 0.78) !important;
+                border: 1px solid #334155;
+            }
+
+            body.dark-mode #contact h4,
+            body.dark-mode #contact h5,
+            body.dark-mode #contact p,
+            body.dark-mode #contact strong,
+            body.dark-mode #contact span,
+            body.dark-mode #contact li {
+                color: #e2e8f0 !important;
+            }
+
+            body.dark-mode #contact [style*="background: white"],
+            body.dark-mode #contact [style*="background:#fff"],
+            body.dark-mode #contact [style*="background: #fff"] {
+                background: rgba(15, 23, 42, 0.78) !important;
+                border-color: #334155 !important;
+            }
+
+            body.dark-mode #contact [style*="color: #475569"],
+            body.dark-mode #contact [style*="color:#475569"],
+            body.dark-mode #contact [style*="color: #64748b"],
+            body.dark-mode #contact [style*="color:#64748b"],
+            body.dark-mode #contact [style*="color: #334155"],
+            body.dark-mode #contact [style*="color:#334155"] {
+                color: #cbd5e1 !important;
+            }
+
+            body.dark-mode #contact .contact-avatar,
+            body.dark-mode #contact .student-avatar {
+                border-color: #1e293b;
+                box-shadow: 0 10px 26px rgba(2, 6, 23, 0.45);
+            }
+
+            @media (max-width: 768px) {
+                .contact-avatar {
+                    width: 140px;
+                    height: 140px;
+                }
+
+                .student-avatar {
+                    width: 96px;
+                    height: 96px;
+                }
             }
 
             /* Email link hover effects */
@@ -1432,10 +1902,420 @@
             }
 
             /* ── Chat Widget ── */
-            .chat-msg { padding:10px 14px; border-radius:14px; font-size:0.88em; max-width:90%; line-height:1.5; }
-            .chat-msg.user { background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff; align-self:flex-end; }
-            .chat-msg.assistant { background:#f1f5f9; color:#334155; align-self:flex-start; white-space:pre-wrap; }
-            #chat-bubble:hover { transform:scale(1.1); }
+            #chat-widget {
+                position: fixed;
+                bottom: 24px;
+                right: 24px;
+                z-index: 9999;
+            }
+            #chat-bubble {
+                width: 68px;
+                height: 68px;
+                background: linear-gradient(135deg,#4361ee,#7c3aed);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 14px 28px rgba(67,97,238,0.45);
+                font-size: 1.9em;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                border: 2px solid rgba(255,255,255,0.8);
+            }
+            #chat-bubble:hover {
+                transform: scale(1.1) translateY(-2px);
+                box-shadow: 0 18px 36px rgba(67,97,238,0.5);
+            }
+            #chat-panel {
+                display: none;
+                position: absolute;
+                bottom: 86px;
+                right: 0;
+                width: 460px;
+                max-width: calc(100vw - 34px);
+                background: #fff;
+                border-radius: 22px;
+                box-shadow: 0 22px 54px rgba(15,23,42,0.25);
+                overflow: hidden;
+                border: 1px solid rgba(67,97,238,0.2);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
+            .chat-panel-header {
+                background: linear-gradient(135deg,#4361ee,#7c3aed);
+                padding: 16px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .chat-panel-title {
+                color: #fff;
+                font-weight: 800;
+                font-size: 1.08em;
+                letter-spacing: 0.2px;
+            }
+            .chat-close-btn {
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: #fff;
+                border-radius: 8px;
+                padding: 6px 10px;
+                cursor: pointer;
+                font-weight: 700;
+            }
+            #chat-mode-shell {
+                padding: 20px 16px;
+                background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+            }
+            .chat-mode-title {
+                font-size: 1em;
+                color: #334155;
+                font-weight: 800;
+                margin-bottom: 12px;
+                text-align: center;
+            }
+            .chat-mode-row {
+                display: flex;
+                gap: 10px;
+            }
+            .chat-mode-btn {
+                flex: 1;
+                border: 1px solid #e2e8f0;
+                background: #f8fafc;
+                color: #334155;
+                padding: 10px 12px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-size: 0.9em;
+                font-weight: 800;
+                transition: all 0.2s ease;
+            }
+            .chat-mode-btn.active {
+                background: linear-gradient(135deg,#4361ee,#7c3aed);
+                border-color: transparent;
+                color: #fff;
+                box-shadow: 0 6px 16px rgba(67,97,238,0.35);
+            }
+            #chat-message-shell {
+                display: none;
+                flex-direction: column;
+                height: 470px;
+            }
+            #chat-messages,
+            #chat-call-transcript {
+                overflow-y: auto;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                background: linear-gradient(180deg,#ffffff 0%, #f8fbff 100%);
+            }
+            #chat-messages {
+                height: 386px;
+            }
+            #chat-call-shell {
+                display: none;
+                padding: 16px;
+                background: linear-gradient(180deg,#ffffff 0%, #f8fafc 100%);
+            }
+            #chat-call-controls {
+                background:#f8fafc;
+                border:1px solid #e2e8f0;
+                border-radius:14px;
+                padding:14px;
+                margin-bottom: 12px;
+            }
+            #chat-call-status {
+                font-size:0.9em;
+                color:#475569;
+                margin-bottom:10px;
+            }
+            #chat-call-toggle-btn {
+                width:100%;
+                background:linear-gradient(135deg,#ef476f,#f59e0b);
+                color:#fff;
+                border:none;
+                border-radius:10px;
+                padding:12px;
+                cursor:pointer;
+                font-weight:800;
+                font-size: 0.95em;
+            }
+            #chat-call-transcript {
+                height: 300px;
+                border:1px solid #e2e8f0;
+                border-radius:14px;
+            }
+            #chat-input-row {
+                padding: 12px;
+                border-top: 1px solid #f0f0f0;
+                display: flex;
+                gap: 8px;
+            }
+            #chat-input {
+                flex:1;
+                padding:11px 14px;
+                border:1px solid #e2e8f0;
+                border-radius:20px;
+                font-size:0.95em;
+            }
+            .chat-send-btn {
+                background:linear-gradient(135deg,#4361ee,#7c3aed);
+                color:#fff;
+                border:none;
+                border-radius:50%;
+                width:42px;
+                height:42px;
+                cursor:pointer;
+                font-size:1.1em;
+            }
+            .chat-msg {
+                padding:10px 14px;
+                border-radius:14px;
+                font-size:0.92em;
+                max-width:92%;
+                line-height:1.55;
+                box-shadow: 0 2px 10px rgba(15,23,42,0.08);
+            }
+            .chat-msg.user {
+                background:linear-gradient(135deg,#4361ee,#7c3aed);
+                color:#fff;
+                align-self:flex-end;
+            }
+            .chat-msg.assistant {
+                background:#eef2ff;
+                color:#1e293b;
+                align-self:flex-start;
+                white-space:pre-wrap;
+            }
+            .chat-msg.call-meta {
+                align-self: center;
+                font-size: 0.78em;
+                padding: 6px 12px;
+                color: #64748b;
+                background: #f1f5f9;
+                border-radius: 999px;
+                box-shadow: none;
+            }
+            @media (max-width: 700px) {
+                #chat-widget {
+                    right: 12px;
+                    bottom: 14px;
+                }
+                #chat-panel {
+                    width: min(96vw, 460px);
+                    right: 0;
+                    bottom: 82px;
+                }
+                #chat-message-shell {
+                    height: 430px;
+                }
+                #chat-messages {
+                    height: 344px;
+                }
+            }
+
+            /* ── Support Widget ── */
+            #support-widget {
+                position: fixed;
+                bottom: 104px;
+                right: 24px;
+                z-index: 9998;
+            }
+            #support-bubble {
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                border: 2px solid rgba(255,255,255,0.8);
+                background: linear-gradient(135deg,#0b1f5e,#1e3a8a);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.9em;
+                cursor: pointer;
+                box-shadow: 0 14px 28px rgba(15,23,68,0.5);
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            #support-bubble:hover {
+                transform: scale(1.1) translateY(-2px);
+                box-shadow: 0 18px 36px rgba(30,58,138,0.58);
+            }
+            #support-bubble-logo {
+                width: 44px;
+                height: 44px;
+                object-fit: contain;
+                pointer-events: none;
+                filter: brightness(1.35) saturate(1.25);
+            }
+            #support-modal {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0,0,0,0.55);
+                z-index: 10010;
+                align-items: center;
+                justify-content: center;
+                padding: 14px;
+            }
+            #support-modal-card {
+                background: #fff;
+                border-radius: 18px;
+                max-width: 560px;
+                width: min(96vw, 560px);
+                box-shadow: 0 22px 54px rgba(15,23,42,0.28);
+                overflow: hidden;
+                border: 1px solid rgba(67,97,238,0.18);
+            }
+            #support-modal-header {
+                background: linear-gradient(135deg,#0b1f5e,#1e3a8a);
+                padding: 18px 22px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            #support-modal-title {
+                color: #fff;
+                font-weight: 800;
+                font-size: 1.1em;
+            }
+            #support-modal-close {
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: #fff;
+                border-radius: 8px;
+                padding: 6px 10px;
+                cursor: pointer;
+                font-weight: 700;
+            }
+            #support-tabs {
+                display: flex;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .support-tab-btn {
+                flex: 1;
+                padding: 13px;
+                border: none;
+                background: #94a3b8;
+                color: #fff;
+                cursor: pointer;
+                font-weight: 700;
+                font-size: 0.95em;
+            }
+            .support-tab-btn.active {
+                background: #4361ee;
+            }
+            .support-panel {
+                padding: 22px;
+                background: #fff;
+            }
+            .support-caption {
+                color: #64748b;
+                font-size: 0.92em;
+                margin-bottom: 16px;
+            }
+            .support-field {
+                margin-bottom: 12px;
+            }
+            .support-label {
+                font-size: 0.85em;
+                color: #64748b;
+                display: block;
+                margin-bottom: 5px;
+            }
+            .support-control {
+                width: 100%;
+                padding: 10px 14px;
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                font-size: 0.95em;
+                background: #fff;
+                color: #0f172a;
+            }
+            .support-textarea {
+                min-height: 92px;
+                resize: vertical;
+            }
+            .support-upload-wrap {
+                margin-bottom: 14px;
+            }
+            #support-upload-label {
+                display: block;
+                width: 100%;
+                padding: 11px;
+                border: 2px solid #06d6a0;
+                border-radius: 12px;
+                text-align: center;
+                cursor: pointer;
+                color: #06d6a0;
+                font-weight: 700;
+                font-size: 0.92em;
+            }
+            #support-screenshot-preview {
+                margin-top: 8px;
+            }
+            #support-submit-btn {
+                width: 100%;
+                background: linear-gradient(135deg,#4361ee,#7c3aed);
+                color: #fff;
+                border: none;
+                padding: 12px;
+                border-radius: 12px;
+                cursor: pointer;
+                font-weight: 800;
+                font-size: 1em;
+            }
+            #support-submit-result {
+                margin-top: 10px;
+            }
+            .support-empty {
+                text-align: center;
+                color: #94a3b8;
+                padding: 20px;
+            }
+
+            body.dark-mode #support-modal-card {
+                background: #0f172a;
+                border: 1px solid rgba(148,163,184,0.25);
+                box-shadow: 0 22px 54px rgba(2,6,23,0.7);
+            }
+            body.dark-mode #support-tabs {
+                border-bottom: 1px solid rgba(148,163,184,0.25);
+            }
+            body.dark-mode .support-tab-btn {
+                background: #475569;
+            }
+            body.dark-mode .support-tab-btn.active {
+                background: #6366f1;
+            }
+            body.dark-mode .support-panel {
+                background: #0f172a;
+            }
+            body.dark-mode .support-caption,
+            body.dark-mode .support-label,
+            body.dark-mode .support-empty {
+                color: #cbd5e1;
+            }
+            body.dark-mode .support-control {
+                background: #0b1630;
+                border-color: rgba(148,163,184,0.3);
+                color: #e2e8f0;
+            }
+            body.dark-mode #support-upload-label {
+                border-color: #22d3ee;
+                color: #22d3ee;
+                background: rgba(34,211,238,0.08);
+            }
+
+            @media (max-width: 700px) {
+                #support-widget {
+                    right: 12px;
+                    bottom: 96px;
+                }
+                #support-modal {
+                    padding: 8px;
+                }
+            }
 
             /* ── Risk Score Gauge ── */
             .risk-gauge { display:flex; flex-direction:column; align-items:center; gap:10px; padding:20px; border-radius:16px; }
@@ -1734,10 +2614,7 @@
                         <div class="contact-card"
                             style="background: linear-gradient(135deg, rgba(67, 97, 238, 0.1), rgba(67, 97, 238, 0.05)); padding: 25px; border-radius: 16px;">
                             <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                                <div
-                                    style="width: 80px; height: 80px; background: linear-gradient(135deg, #4361ee, #7209b7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2em; color: white;">
-                                    👨‍🏫
-                                </div>
+                                <img class="contact-avatar" src="{{ url_for('static', filename='images/faculty-avatar.png') }}" alt="Guided Faculty Photo">
                                 <div style="flex: 1;">
                                     <h5 style="font-size: 1.3em; margin-bottom: 8px; color: #334155;">Dr. Abha Manohar K
                                     </h5>
@@ -1773,10 +2650,7 @@
                             <div class="student-card"
                                 style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #4361ee;">
                                 <div style="display: flex; align-items: flex-start; gap: 15px;">
-                                    <div
-                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #4361ee, #7209b7); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
-                                        👨‍💻
-                                    </div>
+                                    <img class="student-avatar" src="{{ url_for('static', filename='images/student-1-avatars.png') }}" alt="Harshdeep Kumar Photo">
                                     <div>
                                         <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Harshdeep
                                             Kumar</h5>
@@ -1799,10 +2673,7 @@
                             <div class="student-card"
                                 style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #06d6a0;">
                                 <div style="display: flex; align-items: flex-start; gap: 15px;">
-                                    <div
-                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #06d6a0, #0cb48a); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
-                                        👩‍💻
-                                    </div>
+                                    <img class="student-avatar" src="{{ url_for('static', filename='images/student-2-avatar.png') }}" alt="Ankadala Lekhana Photo">
                                     <div>
                                         <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Ankadala
                                             Lekhana</h5>
@@ -1825,10 +2696,7 @@
                             <div class="student-card"
                                 style="background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); border-top: 4px solid #ff9e00;">
                                 <div style="display: flex; align-items: flex-start; gap: 15px;">
-                                    <div
-                                        style="width: 60px; height: 60px; background: linear-gradient(135deg, #ff9e00, #ff7b00); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5em; color: white;">
-                                        👨‍🔬
-                                    </div>
+                                    <img class="student-avatar" src="{{ url_for('static', filename='images/student-3-avatar.png') }}" alt="Addapakala Navya Sri Photo">
                                     <div>
                                         <h5 style="font-size: 1.2em; margin-bottom: 5px; color: #334155;">Addapakala
                                             Navya Sri</h5>
@@ -2045,63 +2913,65 @@
         <!-- ======================================================
              FLOATING AI CHAT WIDGET
              ====================================================== -->
-        <div id="chat-widget" style="position:fixed; bottom:24px; right:24px; z-index:9999;">
-            <div id="chat-bubble" onclick="toggleChat()" style="
-                width:56px; height:56px; background:linear-gradient(135deg,#4361ee,#7c3aed);
-                border-radius:50%; display:flex; align-items:center; justify-content:center;
-                cursor:pointer; box-shadow:0 4px 20px rgba(67,97,238,0.5);
-                font-size:1.6em; transition:transform 0.2s;">🤖</div>
-            <div id="chat-panel" style="
-                display:none; position:absolute; bottom:70px; right:0;
-                width:340px; background:#fff; border-radius:16px;
-                box-shadow:0 8px 40px rgba(0,0,0,0.18); overflow:hidden;
-                border:1px solid rgba(67,97,238,0.2);">
-                <div style="background:linear-gradient(135deg,#4361ee,#7c3aed); padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:#fff; font-weight:700; font-size:1.05em;">🌲 Forest AI Assistant</span>
+        <div id="chat-widget">
+            <div id="chat-bubble" onclick="toggleChat()">🤖</div>
+            <div id="chat-panel">
+                <div class="chat-panel-header">
+                    <span class="chat-panel-title">🌲 Forest AI Assistant</span>
                     <div style="display:flex; gap:8px;">
-                        <button onclick="clearChat()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:0.8em;">🗑️ Clear</button>
-                        <button onclick="toggleChat()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer;">✕</button>
+                        <button onclick="toggleChat()" class="chat-close-btn">✕</button>
                     </div>
                 </div>
-                <div id="chat-messages" style="height:280px; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
-                    <div class="chat-msg assistant">👋 Hello! I'm Forest AI. Ask me anything about forests, climate, or how to use this app!</div>
+                <div id="chat-mode-shell">
+                    <div class="chat-mode-title">AI Mode चुनें</div>
+                    <div class="chat-mode-row">
+                        <button id="chat-mode-message-btn" class="chat-mode-btn" onclick="setChatMode('message')">💬 Messages</button>
+                        <button id="chat-mode-call-btn" class="chat-mode-btn" onclick="setChatMode('call')">📞 Call</button>
+                    </div>
                 </div>
-                <div style="padding:12px; border-top:1px solid #f0f0f0; display:flex; gap:8px;">
-                    <input type="text" id="chat-input" placeholder="Ask me anything..." 
-                        style="flex:1; padding:10px 14px; border:1px solid #e2e8f0; border-radius:20px; font-size:0.9em;"
-                        onkeypress="if(event.key==='Enter') sendChatMessage()">
-                    <button onclick="sendChatMessage()" style="background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff; border:none; border-radius:50%; width:40px; height:40px; cursor:pointer; font-size:1.1em;">➤</button>
+                <div id="chat-message-shell">
+                    <div id="chat-messages"></div>
+                    <div id="chat-input-row">
+                        <input type="text" id="chat-input" placeholder="Type your name and question..." 
+                            onkeypress="if(event.key==='Enter') sendChatMessage()">
+                        <button onclick="sendChatMessage()" class="chat-send-btn">➤</button>
+                    </div>
+                </div>
+                <div id="chat-call-shell">
+                    <div id="chat-call-controls">
+                        <div id="chat-call-status">Speak your name and question to start the call</div>
+                        <button id="chat-call-toggle-btn" onclick="toggleCallListening()">🎙️ Start Call</button>
+                    </div>
+                    <div id="chat-call-transcript"></div>
                 </div>
             </div>
         </div>
 
         <!-- Support Floating Button -->
-        <div id="support-widget" style="position:fixed; bottom:94px; right:24px; z-index:9998;">
-            <button onclick="toggleSupport()" style="
-                width:50px; height:50px; background:linear-gradient(135deg,#ef476f,#ff9e00);
-                border-radius:50%; border:none; display:flex; align-items:center; justify-content:center;
-                cursor:pointer; box-shadow:0 4px 18px rgba(239,71,111,0.45);
-                font-size:1.4em; transition:transform 0.2s;" title="Support">🎧</button>
+        <div id="support-widget">
+            <button id="support-bubble" onclick="toggleSupport()" title="Support" aria-label="Support">
+                <img id="support-bubble-logo" src="{{ url_for('static', filename='icons/support.png') }}" alt="Support">
+            </button>
         </div>
 
         <!-- Support Modal -->
-        <div id="support-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10010;align-items:center;justify-content:center;">
-            <div style="background:#fff;border-radius:18px;padding:0;max-width:480px;width:94%;box-shadow:0 8px 40px rgba(0,0,0,0.2);overflow:hidden;">
-                <div style="background:linear-gradient(135deg,#ef476f,#ff9e00);padding:18px 22px;display:flex;justify-content:space-between;align-items:center;">
-                    <span style="color:#fff;font-weight:700;font-size:1.1em;">🎧 Support</span>
-                    <button onclick="toggleSupport()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;">✕</button>
+        <div id="support-modal">
+            <div id="support-modal-card">
+                <div id="support-modal-header">
+                    <span id="support-modal-title">🎧 Support</span>
+                    <button onclick="toggleSupport()" id="support-modal-close">✕</button>
                 </div>
                 <!-- Tabs -->
-                <div style="display:flex;border-bottom:2px solid #f0f0f0;">
-                    <button id="support-tab-new" onclick="switchSupportTab('new')" style="flex:1;padding:12px;border:none;background:#4361ee;color:#fff;cursor:pointer;font-weight:600;font-size:0.95em;">New Query</button>
-                    <button id="support-tab-my" onclick="switchSupportTab('my')" style="flex:1;padding:12px;border:none;background:#94a3b8;color:#fff;cursor:pointer;font-weight:600;font-size:0.95em;">My Queries</button>
+                <div id="support-tabs">
+                    <button id="support-tab-new" onclick="switchSupportTab('new')" class="support-tab-btn active">New Query</button>
+                    <button id="support-tab-my" onclick="switchSupportTab('my')" class="support-tab-btn">My Queries</button>
                 </div>
                 <!-- New Query Tab -->
-                <div id="support-new-panel" style="padding:22px;">
-                    <p style="color:#64748b;font-size:0.9em;margin-bottom:16px;">Report issues or request assistance from our technical team</p>
-                    <div style="margin-bottom:12px;">
-                        <label style="font-size:0.85em;color:#64748b;display:block;margin-bottom:5px;">Select Issue Type *</label>
-                        <select id="support-issue-type" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:0.95em;">
+                <div id="support-new-panel" class="support-panel">
+                    <p class="support-caption">Report issues or request assistance from our technical team</p>
+                    <div class="support-field">
+                        <label class="support-label">Select Issue Type *</label>
+                        <select id="support-issue-type" class="support-control">
                             <option value="">Select Issue Type *</option>
                             <option value="Bug Report">Bug Report</option>
                             <option value="Feature Request">Feature Request</option>
@@ -2111,20 +2981,20 @@
                             <option value="General">General</option>
                         </select>
                     </div>
-                    <div style="margin-bottom:12px;">
-                        <textarea id="support-description" placeholder="Description (Optional)" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:0.9em;height:90px;resize:vertical;"></textarea>
+                    <div class="support-field">
+                        <textarea id="support-description" placeholder="Description (Optional)" class="support-control support-textarea"></textarea>
                     </div>
-                    <div style="margin-bottom:14px;">
-                        <label for="support-screenshot" style="display:block;width:100%;padding:11px;border:2px solid #06d6a0;border-radius:10px;text-align:center;cursor:pointer;color:#06d6a0;font-weight:600;font-size:0.9em;">📷 Upload Screenshot</label>
+                    <div class="support-field support-upload-wrap">
+                        <label for="support-screenshot" id="support-upload-label">📷 Upload Screenshot</label>
                         <input type="file" id="support-screenshot" accept="image/*" style="display:none;" onchange="previewSupportScreenshot(this)">
-                        <div id="support-screenshot-preview" style="margin-top:8px;"></div>
+                        <div id="support-screenshot-preview"></div>
                     </div>
-                    <button onclick="submitSupportQuery()" style="width:100%;background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;border:none;padding:12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:1em;">Submit</button>
-                    <div id="support-submit-result" style="margin-top:10px;"></div>
+                    <button onclick="submitSupportQuery()" id="support-submit-btn">Submit</button>
+                    <div id="support-submit-result"></div>
                 </div>
                 <!-- My Queries Tab -->
-                <div id="support-my-panel" style="display:none;padding:18px;">
-                    <div id="support-my-list"><p style="text-align:center;color:#94a3b8;padding:20px;">Loading your queries...</p></div>
+                <div id="support-my-panel" class="support-panel" style="display:none;">
+                    <div id="support-my-list"><p class="support-empty">Loading your queries...</p></div>
                 </div>
             </div>
         </div>
@@ -2237,6 +3107,8 @@
                 // Check authentication first
                 const isAuthenticated = await checkAuth();
                 if (!isAuthenticated) return;
+
+                await refreshChatOnLogin();
 
                 initializeCharts();
                 loadInitialData();
@@ -4040,6 +4912,7 @@
             display: none;
             padding: 20px;
             background: #f8f9ff;
+            border: 1px solid rgba(67, 97, 238, 0.14);
             border-radius: 12px;
             margin-bottom: 20px;
         }
@@ -4051,6 +4924,13 @@
             color: #4361ee;
             margin-bottom: 20px;
             font-size: 1.2em;
+        }
+        body.dark-mode .prediction-step {
+            background: rgba(15, 23, 42, 0.72);
+            border-color: #334155;
+        }
+        body.dark-mode .prediction-step h4 {
+            color: #93c5fd;
         }
     `;
             document.head.appendChild(style);
@@ -4157,7 +5037,8 @@
                     const best = data.best_model;
                     const colors = {
                         'linear_regression':'#4361ee','polynomial_regression':'#7c3aed',
-                        'random_forest':'#06d6a0','decision_tree':'#ff9e00','gradient_boosting':'#ef476f'
+                        'random_forest':'#06d6a0','decision_tree':'#ff9e00','gradient_boosting':'#ef476f',
+                        'ann':'#118ab2'
                     };
 
                     body.innerHTML = `
@@ -5194,13 +6075,434 @@
             // AI CHAT WIDGET
             // ─────────────────────────────────────────────────────────────
             let _chatOpen = false;
+            let _chatMode = null;
+            let _speechRecognition = null;
+            let _isListening = false;
+            let _isCallSending = false;
+            let _lastVoiceTranscript = '';
+            let _lastVoiceAt = 0;
+
+            const _chatUiText = {
+                en: {
+                    namePrompt: '👋 Hello! Please type only your name and what you want to ask.',
+                    placeholder: 'Type your name and question...',
+                    callStatusStart: 'Speak your name and question to start the call',
+                    liveTranscript: '🎙️ Live call transcript will appear here',
+                    startCall: '🎙️ Start Call',
+                    stopCall: '⏹️ Stop Call',
+                    callStopped: 'Call stopped',
+                    listening: 'Listening... speak now',
+                    voiceNotClear: 'Voice not clear. Please speak again.',
+                    tapStartAgain: 'Tap Start Call and speak again.',
+                    noiseDetected: 'Background noise detected. Please speak again.',
+                    duplicateIgnored: 'Duplicate voice ignored. Tap Start Call to ask again.',
+                    processingPrevious: 'Previous request is being processed...',
+                    sendingToAi: 'Sending your voice to AI...',
+                    answerReady: 'Answer ready. Tap Start Call for next question.',
+                    browserUnsupported: 'Voice call is not supported in this browser. Use Chrome/Edge.',
+                    unableStart: 'Unable to start voice call',
+                    talkingToAi: 'Talking to AI...',
+                    thinking: '🤔 Thinking...'
+                },
+                hi: {
+                    namePrompt: '👋 नमस्ते! कृपया सिर्फ अपना नाम और क्या पूछना चाहते हैं वही लिखें।',
+                    placeholder: 'अपना नाम और क्या पूछना चाहते हैं लिखें...',
+                    callStatusStart: 'अपना नाम और सवाल बोलकर call शुरू करें',
+                    liveTranscript: '🎙️ Live call transcript दिखाई देगा',
+                    startCall: '🎙️ Start Call',
+                    stopCall: '⏹️ Stop Call',
+                    callStopped: 'Call stopped',
+                    listening: 'Listening... बोलिए / Speak now',
+                    voiceNotClear: 'Voice clear नहीं मिला। कृपया फिर से बोलें।',
+                    tapStartAgain: 'Tap Start Call and speak again.',
+                    noiseDetected: 'Background noise detect हुआ। कृपया दुबारा बोलें।',
+                    duplicateIgnored: 'Duplicate voice ignored. Tap Start Call to ask again.',
+                    processingPrevious: 'Previous request process हो रही है...',
+                    sendingToAi: 'Sending your voice to AI...',
+                    answerReady: 'Answer ready. Next question ke liye Start Call दबाएँ।',
+                    browserUnsupported: 'Voice call is not supported in this browser. Use Chrome/Edge.',
+                    unableStart: 'Unable to start voice call',
+                    talkingToAi: 'AI से बात हो रही है...',
+                    thinking: '🤔 Thinking...'
+                },
+                as: {
+                    namePrompt: '👋 নমস্কাৰ! অনুগ্ৰহ কৰি আপোনাৰ নাম আৰু কি সুধিব বিচাৰে সেইটো লিখক।',
+                    placeholder: 'আপোনাৰ নাম আৰু প্ৰশ্ন লিখক...',
+                    callStatusStart: 'কল আৰম্ভ কৰিবলৈ আপোনাৰ নাম আৰু প্ৰশ্ন কওক',
+                    liveTranscript: '🎙️ লাইভ কল ট্ৰান্সক্ৰিপ্ট ইয়াত দেখা যাব'
+                },
+                bn: {
+                    namePrompt: '👋 নমস্কার! অনুগ্রহ করে আপনার নাম এবং কী জানতে চান তা লিখুন।',
+                    placeholder: 'আপনার নাম ও প্রশ্ন লিখুন...',
+                    callStatusStart: 'কল শুরু করতে আপনার নাম ও প্রশ্ন বলুন',
+                    liveTranscript: '🎙️ লাইভ কল ট্রান্সক্রিপ্ট এখানে দেখা যাবে'
+                },
+                brx: {
+                    namePrompt: '👋 नमस्कार! अननानै नोंनि मुं आरो मा सोंनानै लिर।',
+                    placeholder: 'नोंनि मुं आरो सोंनायखौ लिर...',
+                    callStatusStart: 'कॉल जागायनो नोंनि मुं आरो सोंनाय खालाम',
+                    liveTranscript: '🎙️ लाइभ कॉल ट्रांसक्रिप्ट बेयाव नुजागोन'
+                },
+                doi: {
+                    namePrompt: '👋 नमस्कार! किरपा करके अपना नां ते के पुछणा चाहंदे ओई लिखो।',
+                    placeholder: 'अपना नां ते सवाल लिखो...',
+                    callStatusStart: 'कॉल शुरू करने लेई अपना नां ते सवाल बोलो',
+                    liveTranscript: '🎙️ लाइव कॉल ट्रांस्क्रिप्ट इत्थे दिखेगा'
+                },
+                gu: {
+                    namePrompt: '👋 નમસ્તે! કૃપા કરીને તમારું નામ અને શું પૂછવું છે તે લખો.',
+                    placeholder: 'તમારું નામ અને પ્રશ્ન લખો...',
+                    callStatusStart: 'કૉલ શરૂ કરવા તમારું નામ અને પ્રશ્ન બોલો',
+                    liveTranscript: '🎙️ લાઇવ કૉલ ટ્રાન્સક્રિપ્ટ અહીં દેખાશે'
+                },
+                kn: {
+                    namePrompt: '👋 ನಮಸ್ಕಾರ! ದಯವಿಟ್ಟು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ಏನು ಕೇಳಬೇಕು ಎಂಬುದನ್ನು ಬರೆಯಿರಿ.',
+                    placeholder: 'ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ಪ್ರಶ್ನೆ ಬರೆಯಿರಿ...',
+                    callStatusStart: 'ಕಾಲ್ ಆರಂಭಿಸಲು ನಿಮ್ಮ ಹೆಸರು ಮತ್ತು ಪ್ರಶ್ನೆ ಹೇಳಿ',
+                    liveTranscript: '🎙️ ಲೈವ್ ಕಾಲ್ ಟ್ರಾನ್ಸ್‌ಕ್ರಿಪ್ಟ್ ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ'
+                },
+                ks: {
+                    namePrompt: '👋 آداب! مہربٲنی کرتھ پنُن ناو تہ سوال لیکھِو۔',
+                    placeholder: 'پنُن ناو تہ سوال لیکھِو...',
+                    callStatusStart: 'کال شروع کرنہٕ خٲطرٕ پنُن ناو تہ سوال بوٚلو',
+                    liveTranscript: '🎙️ لائیو کال ٹرانسکرپٹ یتھ ظٲہر گژھِ'
+                },
+                gom: {
+                    namePrompt: '👋 नमस्कार! कृपया तुमचें नांव आनी कितें विचारचें ते बरयात.',
+                    placeholder: 'तुमचें नांव आनी प्रस्न बरयात...',
+                    callStatusStart: 'कॉल सुरू करपाक तुमचें नांव आनी प्रस्न सांगात',
+                    liveTranscript: '🎙️ लाईव कॉल ट्रांस्क्रिप्ट हांगा दिसतलो'
+                },
+                mai: {
+                    namePrompt: '👋 नमस्कार! कृपया अपन नाम आ की पूछए चाहैत छी, से लिखू।',
+                    placeholder: 'अपन नाम आ प्रश्न लिखू...',
+                    callStatusStart: 'कॉल शुरू करए लेल अपन नाम आ प्रश्न बाजू',
+                    liveTranscript: '🎙️ लाइव कॉल ट्रांसक्रिप्ट एतय देखाएत'
+                },
+                ml: {
+                    namePrompt: '👋 നമസ്കാരം! ദയവായി നിങ്ങളുടെ പേര്‌, എന്താണ് ചോദിക്കാൻ ഉള്ളത് എന്ന് എഴുതുക.',
+                    placeholder: 'നിങ്ങളുടെ പേര്‌യും ചോദ്യവും എഴുതുക...',
+                    callStatusStart: 'കോൾ തുടങ്ങാൻ നിങ്ങളുടെ പേര്‌യും ചോദ്യവും പറയൂ',
+                    liveTranscript: '🎙️ ലൈവ് കോൾ ട്രാൻസ്‌ക്രിപ്റ്റ് ഇവിടെ കാണിക്കും'
+                },
+                mni: {
+                    namePrompt: '👋 ꯈꯨꯔꯨꯝꯖꯔꯤ! ꯑꯃꯨꯛ ꯅꯪꯒꯤ ꯃꯤꯡ ꯑꯃꯁꯨꯡ ꯀꯔꯤ ꯍꯥꯏꯔꯤꯕꯥ ꯂꯤꯔꯨ।',
+                    placeholder: 'ꯅꯪꯒꯤ ꯃꯤꯡ ꯑꯃꯁꯨꯡ ꯋꯥꯍꯪ ꯂꯤꯔꯨ...',
+                    callStatusStart: 'ꯀꯣꯜ ꯍꯧꯒꯠꯅꯕꯥ ꯅꯪꯒꯤ ꯃꯤꯡ ꯑꯃꯁꯨꯡ ꯋꯥꯍꯪ ꯍꯥꯏꯔꯨ',
+                    liveTranscript: '🎙️ ꯂꯥꯏꯚ ꯀꯣꯜ ꯇ꯭ꯔꯥꯟꯁꯀ꯭ꯔꯤꯞ ꯃꯁꯤꯗ ꯎꯠꯄꯒꯅꯤ'
+                },
+                mr: {
+                    namePrompt: '👋 नमस्कार! कृपया तुमचे नाव आणि काय विचारायचे आहे ते लिहा.',
+                    placeholder: 'तुमचे नाव आणि प्रश्न लिहा...',
+                    callStatusStart: 'कॉल सुरू करण्यासाठी तुमचे नाव आणि प्रश्न बोला',
+                    liveTranscript: '🎙️ लाईव्ह कॉल ट्रान्सक्रिप्ट येथे दिसेल'
+                },
+                ne: {
+                    namePrompt: '👋 नमस्ते! कृपया आफ्नो नाम र के सोध्न चाहनुहुन्छ लेख्नुहोस्।',
+                    placeholder: 'आफ्नो नाम र प्रश्न लेख्नुहोस्...',
+                    callStatusStart: 'कल सुरु गर्न आफ्नो नाम र प्रश्न बोल्नुहोस्',
+                    liveTranscript: '🎙️ लाइभ कल ट्रान्सक्रिप्ट यहाँ देखिनेछ'
+                },
+                or: {
+                    namePrompt: '👋 ନମସ୍କାର! ଦୟାକରି ଆପଣଙ୍କ ନାମ ଏବଂ କଣ ପଚାରିବାକୁ ଚାହୁଁଛନ୍ତି ଲେଖନ୍ତୁ।',
+                    placeholder: 'ଆପଣଙ୍କ ନାମ ଏବଂ ପ୍ରଶ୍ନ ଲେଖନ୍ତୁ...',
+                    callStatusStart: 'କଲ୍ ଆରମ୍ଭ ପାଇଁ ଆପଣଙ୍କ ନାମ ଏବଂ ପ୍ରଶ୍ନ କହନ୍ତୁ',
+                    liveTranscript: '🎙️ ଲାଇଭ୍ କଲ୍ ଟ୍ରାନ୍ସକ୍ରିପ୍ଟ ଏଠାରେ ଦେଖିବେ'
+                },
+                pa: {
+                    namePrompt: '👋 ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਨਾਮ ਅਤੇ ਕੀ ਪੁੱਛਣਾ ਹੈ ਉਹ ਲਿਖੋ।',
+                    placeholder: 'ਆਪਣਾ ਨਾਮ ਅਤੇ ਸਵਾਲ ਲਿਖੋ...',
+                    callStatusStart: 'ਕਾਲ ਸ਼ੁਰੂ ਕਰਨ ਲਈ ਆਪਣਾ ਨਾਮ ਅਤੇ ਸਵਾਲ ਬੋਲੋ',
+                    liveTranscript: '🎙️ ਲਾਈਵ ਕਾਲ ਟ੍ਰਾਂਸਕ੍ਰਿਪਟ ਇੱਥੇ ਵੇਖੇਗਾ'
+                },
+                sa: {
+                    namePrompt: '👋 नमस्ते! कृपया स्वनाम तथा किं पृष्टुम् इच्छसि तत् लिखतु।',
+                    placeholder: 'स्वनाम प्रश्नं च लिखतु...',
+                    callStatusStart: 'कॉल आरम्भाय स्वनाम प्रश्नं च वदतु',
+                    liveTranscript: '🎙️ लाइव कॉल ट्रांसक्रिप्ट अत्र दृश्यते'
+                },
+                sat: {
+                    namePrompt: '👋 ᱡᱚᱦᱟᱨ! ᱟᱢᱟᱜ ᱧᱩᱛᱩᱢ ᱟᱨ ᱪᱮᱫ ᱠᱩᱞᱤ ᱞᱮᱠᱷᱟ ᱢᱮ।',
+                    placeholder: 'ᱟᱢᱟᱜ ᱧᱩᱛᱩᱢ ᱟᱨ ᱪᱮᱫ ᱞᱮᱠᱷᱟ ᱢᱮ...',
+                    callStatusStart: 'ᱠᱚᱞ ᱮᱦᱚᱵ ᱞᱟᱹᱜᱤᱫ ᱧᱩᱛᱩᱢ ᱟᱨ ᱪᱮᱫ ᱢᱮᱱ ᱢᱮ',
+                    liveTranscript: '🎙️ ᱞᱟᱭᱤᱵ ᱠᱚᱞ ᱴᱨᱟᱱᱥᱠᱨᱤᱯᱴ ᱱᱚᱰᱮ ᱫᱤᱥᱚᱢ'
+                },
+                sd: {
+                    namePrompt: '👋 سلام! مهرباني ڪري پنهنجو نالو ۽ ڇا پڇڻ چاهيو ٿا لکو۔',
+                    placeholder: 'پنهنجو نالو ۽ سوال لکو...',
+                    callStatusStart: 'ڪال شروع ڪرڻ لاءِ پنهنجو نالو ۽ سوال ٻڌايو',
+                    liveTranscript: '🎙️ لائيو ڪال ٽرانسڪرپٽ هتي نظر ايندو'
+                },
+                ta: {
+                    namePrompt: '👋 வணக்கம்! தயவு செய்து உங்கள் பெயரும் கேள்வியும் எழுதுங்கள்.',
+                    placeholder: 'உங்கள் பெயர் மற்றும் கேள்வியை எழுதுங்கள்...',
+                    callStatusStart: 'கால் தொடங்க உங்கள் பெயரும் கேள்வியும் சொல்லுங்கள்',
+                    liveTranscript: '🎙️ நேரடி கால் உரை இங்கு காணப்படும்'
+                },
+                te: {
+                    namePrompt: '👋 నమస్కారం! దయచేసి మీ పేరు మరియు ఏమి అడగాలనుకుంటున్నారో రాయండి.',
+                    placeholder: 'మీ పేరు మరియు ప్రశ్న రాయండి...',
+                    callStatusStart: 'కాల్ ప్రారంభించడానికి మీ పేరు మరియు ప్రశ్న చెప్పండి',
+                    liveTranscript: '🎙️ లైవ్ కాల్ ట్రాన్స్‌క్రిప్ట్ ఇక్కడ కనిపిస్తుంది'
+                },
+                ur: {
+                    namePrompt: '👋 السلام علیکم! براہ کرم اپنا نام اور کیا پوچھنا ہے لکھیں۔',
+                    placeholder: 'اپنا نام اور سوال لکھیں...',
+                    callStatusStart: 'کال شروع کرنے کے لیے اپنا نام اور سوال بولیں',
+                    liveTranscript: '🎙️ لائیو کال ٹرانسکرپٹ یہاں دکھے گا'
+                }
+            };
+
+            function _currentChatLang() {
+                const code = (localStorage.getItem('fp_lang') || 'en').toLowerCase();
+                return code in _chatUiText ? code : 'en';
+            }
+
+            function trChat(key) {
+                const lang = _currentChatLang();
+                return (_chatUiText[lang] && _chatUiText[lang][key]) || _chatUiText.en[key] || '';
+            }
+
+            function refreshChatUiText() {
+                const input = document.getElementById('chat-input');
+                const callStatus = document.getElementById('chat-call-status');
+                const callBtn = document.getElementById('chat-call-toggle-btn');
+                if (input) input.placeholder = trChat('placeholder');
+                if (callStatus && !_isListening && !_isCallSending) callStatus.textContent = trChat('callStatusStart');
+                if (callBtn && !_isListening) callBtn.textContent = trChat('startCall');
+            }
+
+            function getNameQuestionPrompt() {
+                return trChat('namePrompt');
+            }
+
+            function resetMessageBoard() {
+                const box = document.getElementById('chat-messages');
+                if (!box) return;
+                box.innerHTML = `<div class="chat-msg assistant">${escapeHtml(getNameQuestionPrompt())}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function resetCallTranscript() {
+                const box = document.getElementById('chat-call-transcript');
+                if (!box) return;
+                box.innerHTML = `<div class="chat-msg call-meta">${escapeHtml(trChat('liveTranscript'))}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function getChatBox(mode) {
+                return document.getElementById(mode === 'call' ? 'chat-call-transcript' : 'chat-messages');
+            }
+
+            function appendChatMessage(mode, role, text, isTyping = false) {
+                const box = getChatBox(mode);
+                if (!box) return;
+                const typingAttr = isTyping ? ' data-chat-typing="1"' : '';
+                box.innerHTML += `<div class="chat-msg ${role}"${typingAttr}>${escapeHtml(text)}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+
+            function removeTypingMessage(mode) {
+                const box = getChatBox(mode);
+                if (!box) return;
+                const typing = box.querySelector('[data-chat-typing="1"]');
+                if (typing) typing.remove();
+            }
+
+            function resetChatSelection() {
+                _chatMode = null;
+                stopCallListening(true);
+                const msgBtn = document.getElementById('chat-mode-message-btn');
+                const callBtn = document.getElementById('chat-mode-call-btn');
+                const modeShell = document.getElementById('chat-mode-shell');
+                const msgShell = document.getElementById('chat-message-shell');
+                const callShell = document.getElementById('chat-call-shell');
+                if (msgBtn) msgBtn.classList.remove('active');
+                if (callBtn) callBtn.classList.remove('active');
+                if (modeShell) modeShell.style.display = 'block';
+                if (msgShell) msgShell.style.display = 'none';
+                if (callShell) callShell.style.display = 'none';
+            }
+
+            const _speechLangMap = {
+                en: 'en-US', hi: 'hi-IN', as: 'as-IN', bn: 'bn-IN', brx: 'hi-IN', doi: 'hi-IN', gu: 'gu-IN',
+                kn: 'kn-IN', ks: 'ur-IN', gom: 'kok-IN', mai: 'hi-IN', ml: 'ml-IN',
+                mni: 'bn-IN', mr: 'mr-IN', ne: 'ne-NP', or: 'or-IN', pa: 'pa-IN',
+                sa: 'hi-IN', sat: 'hi-IN', sd: 'sd-IN', ta: 'ta-IN', te: 'te-IN', ur: 'ur-PK'
+            };
+
+            function getSpeechLangCode() {
+                const code = (localStorage.getItem('fp_lang') || 'en').toLowerCase();
+                return _speechLangMap[code] || 'en-US';
+            }
+
+            function setChatMode(mode) {
+                _chatMode = mode === 'call' ? 'call' : 'message';
+                const msgBtn = document.getElementById('chat-mode-message-btn');
+                const callBtn = document.getElementById('chat-mode-call-btn');
+                const modeShell = document.getElementById('chat-mode-shell');
+                const msgShell = document.getElementById('chat-message-shell');
+                const callShell = document.getElementById('chat-call-shell');
+                const callControls = document.getElementById('chat-call-controls');
+                if (msgBtn) msgBtn.classList.toggle('active', _chatMode === 'message');
+                if (callBtn) callBtn.classList.toggle('active', _chatMode === 'call');
+                if (modeShell) modeShell.style.display = 'none';
+                if (msgShell) msgShell.style.display = _chatMode === 'message' ? 'flex' : 'none';
+                if (callShell) callShell.style.display = _chatMode === 'call' ? 'block' : 'none';
+                if (callControls) callControls.style.display = 'block';
+                if (_chatMode !== 'call') {
+                    stopCallListening(true);
+                    resetMessageBoard();
+                    document.getElementById('chat-input')?.focus();
+                } else {
+                    setCallStatus(trChat('callStatusStart'));
+                    resetCallTranscript();
+                }
+            }
+
+            function setCallStatus(text) {
+                const el = document.getElementById('chat-call-status');
+                if (el) el.textContent = text;
+            }
+
+            function stopCallListening(silent = false) {
+                if (_speechRecognition) {
+                    try {
+                        _speechRecognition.onend = null;
+                        _speechRecognition.stop();
+                    } catch (e) {
+                        console.error(e);
+                    }
+                    _speechRecognition = null;
+                }
+                _isListening = false;
+                _isCallSending = false;
+                const btn = document.getElementById('chat-call-toggle-btn');
+                if (btn) btn.textContent = trChat('startCall');
+                if (!silent) setCallStatus(trChat('callStopped'));
+            }
+
+            function speakAssistantReply(text) {
+                if (!('speechSynthesis' in window) || !text) return;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = getSpeechLangCode();
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                try {
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                } catch (e) {
+                    console.error('speechSynthesis error:', e);
+                }
+            }
+
+            async function toggleCallListening() {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SR) {
+                    setCallStatus(trChat('browserUnsupported'));
+                    return;
+                }
+
+                if (_isListening) {
+                    stopCallListening();
+                    return;
+                }
+
+                _speechRecognition = new SR();
+                _speechRecognition.lang = getSpeechLangCode();
+                _speechRecognition.continuous = false;
+                _speechRecognition.interimResults = true;
+                _speechRecognition.maxAlternatives = 1;
+
+                _speechRecognition.onstart = () => {
+                    _isListening = true;
+                    const btn = document.getElementById('chat-call-toggle-btn');
+                    if (btn) btn.textContent = trChat('stopCall');
+                    setCallStatus(trChat('listening'));
+                };
+
+                _speechRecognition.onresult = async (event) => {
+                    const current = event.results[event.resultIndex];
+                    if (!current || !current.isFinal) return;
+
+                    const alt = current[0] || {};
+                    const transcript = (alt.transcript || '').trim();
+                    const confidence = typeof alt.confidence === 'number' ? alt.confidence : 0;
+                    const normalized = transcript
+                        .toLowerCase()
+                        .replace(/[^\p{L}\p{N}\s]/gu, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                    if (!normalized || normalized.length < 4) {
+                        setCallStatus(trChat('voiceNotClear'));
+                        stopCallListening(true);
+                        setCallStatus(trChat('tapStartAgain'));
+                        return;
+                    }
+
+                    if (confidence > 0 && confidence < 0.35) {
+                        setCallStatus(trChat('noiseDetected'));
+                        stopCallListening(true);
+                        setCallStatus(trChat('tapStartAgain'));
+                        return;
+                    }
+
+                    const now = Date.now();
+                    if (_lastVoiceTranscript === normalized && (now - _lastVoiceAt) < 3000) {
+                        stopCallListening(true);
+                        setCallStatus(trChat('duplicateIgnored'));
+                        return;
+                    }
+
+                    if (_isCallSending) {
+                        setCallStatus(trChat('processingPrevious'));
+                        return;
+                    }
+
+                    _lastVoiceTranscript = normalized;
+                    _lastVoiceAt = now;
+                    _isCallSending = true;
+                    setCallStatus(trChat('sendingToAi'));
+                    try {
+                        await sendChatMessage(transcript, 'call');
+                    } finally {
+                        _isCallSending = false;
+                        stopCallListening(true);
+                        setCallStatus(trChat('answerReady'));
+                    }
+                };
+
+                _speechRecognition.onerror = (event) => {
+                    _isCallSending = false;
+                    setCallStatus(`Call error: ${event.error || 'unknown'}`);
+                    stopCallListening(true);
+                };
+
+                _speechRecognition.onend = () => {
+                    if (_isListening) {
+                        _isListening = false;
+                        const btn = document.getElementById('chat-call-toggle-btn');
+                        if (btn) btn.textContent = trChat('startCall');
+                    }
+                };
+
+                try {
+                    _speechRecognition.start();
+                } catch (e) {
+                    setCallStatus(trChat('unableStart'));
+                    stopCallListening(true);
+                }
+            }
+
             async function toggleChat() {
                 _chatOpen = !_chatOpen;
                 const panel = document.getElementById('chat-panel');
                 panel.style.display = _chatOpen ? 'block' : 'none';
                 if (_chatOpen) {
-                    await loadChatHistory();
-                    document.getElementById('chat-input')?.focus();
+                    resetChatSelection();
+                } else {
+                    stopCallListening(true);
                 }
             }
 
@@ -5217,43 +6519,78 @@
                 } catch(e) { console.error('loadChatHistory',e); }
             }
 
-            async function sendChatMessage() {
+            async function sendChatMessage(messageOverride = null, modeOverride = null) {
+                const mode = modeOverride || _chatMode;
                 const input = document.getElementById('chat-input');
-                const msg = input?.value?.trim();
+                const msg = (messageOverride ?? input?.value)?.trim();
                 if (!msg) return;
-                input.value = '';
+                if (!messageOverride && input) input.value = '';
+                if (!messageOverride && mode !== 'message') return;
 
                 const box = document.getElementById('chat-messages');
-                box.innerHTML += `<div class="chat-msg user">${escapeHtml(msg)}</div>`;
-                box.innerHTML += `<div class="chat-msg assistant" id="chat-typing">🤔 Thinking...</div>`;
-                box.scrollTop = box.scrollHeight;
+                if (!box && mode === 'message') return;
+                if (mode === 'call') {
+                    appendChatMessage('call', 'user', `🗣️ ${msg}`);
+                    setCallStatus(trChat('talkingToAi'));
+                    appendChatMessage('call', 'assistant', trChat('thinking'), true);
+                } else {
+                    appendChatMessage('message', 'user', msg);
+                    appendChatMessage('message', 'assistant', trChat('thinking'), true);
+                }
 
                 try {
+                    const preferredLanguage = (localStorage.getItem('fp_lang') || '').trim();
+                    const preferredLabel = (localStorage.getItem('fp_lang_label') || '').trim();
                     const r = await fetch('/api/chat', {
                         method:'POST', headers:{'Content-Type':'application/json'},
-                        body: JSON.stringify({message:msg})
+                        body: JSON.stringify({
+                            message: msg,
+                            mode,
+                            preferred_language: preferredLanguage,
+                            preferred_label: preferredLabel
+                        })
                     });
                     const d = await r.json();
-                    const typing = document.getElementById('chat-typing');
-                    if (typing) typing.remove();
+                    removeTypingMessage(mode);
                     if (d.success) {
-                        box.innerHTML += `<div class="chat-msg assistant">${escapeHtml(d.response)}</div>`;
+                        appendChatMessage(mode, 'assistant', d.response);
+                        if (mode === 'call') speakAssistantReply(d.response);
                     } else {
-                        box.innerHTML += `<div class="chat-msg assistant" style="color:#dc2626;">Error: ${escapeHtml(d.message||'Unknown error')}</div>`;
+                        if (mode === 'message') {
+                            appendChatMessage('message', 'assistant', `Error: ${d.message||'Unknown error'}`);
+                        } else {
+                            setCallStatus(`Error: ${d.message || 'Unknown error'}`);
+                            appendChatMessage('call', 'assistant', `Error: ${d.message || 'Unknown error'}`);
+                        }
                     }
-                    box.scrollTop = box.scrollHeight;
+                    if (mode === 'call') setCallStatus(trChat('listening'));
                 } catch(e) {
-                    document.getElementById('chat-typing')?.remove();
-                    box.innerHTML += `<div class="chat-msg assistant" style="color:#dc2626;">Error: ${escapeHtml(e.message)}</div>`;
+                    removeTypingMessage(mode);
+                    if (mode === 'message') {
+                        appendChatMessage('message', 'assistant', `Error: ${e.message}`);
+                    } else {
+                        setCallStatus(`Error: ${e.message}`);
+                        appendChatMessage('call', 'assistant', `Error: ${e.message}`);
+                    }
                 }
             }
 
             async function clearChat() {
                 try {
                     await fetch('/api/chat/clear', {method:'POST', headers:{'Content-Type':'application/json'}});
-                    document.getElementById('chat-messages').innerHTML =
-                        '<div class="chat-msg assistant">Chat cleared! Ask me anything about forests and climate.</div>';
+                    resetMessageBoard();
                 } catch(e) { console.error('clearChat',e); }
+            }
+
+            async function refreshChatOnLogin() {
+                try {
+                    await fetch('/api/chat/clear', {method:'POST', headers:{'Content-Type':'application/json'}});
+                } catch (e) {
+                    console.error('refreshChatOnLogin', e);
+                }
+                resetMessageBoard();
+                resetChatSelection();
+                refreshChatUiText();
             }
 
             function escapeHtml(str) {
@@ -5365,10 +6702,12 @@
                 const tm = document.getElementById('support-tab-my');
                 if (tab === 'new') {
                     np.style.display='block'; mp.style.display='none';
-                    tn.style.background='#4361ee'; tm.style.background='#94a3b8';
+                    tn.classList.add('active');
+                    tm.classList.remove('active');
                 } else {
                     np.style.display='none'; mp.style.display='block';
-                    tn.style.background='#94a3b8'; tm.style.background='#4361ee';
+                    tn.classList.remove('active');
+                    tm.classList.add('active');
                     loadMyQueries();
                 }
             }
@@ -5560,5 +6899,141 @@
                 initGlobalLibraryToggle();
             }, 2000);
         </script>
+
+    <!-- Google Translate (hidden - controlled via custom UI) -->
+    <div id="google_translate_element" style="display:none;"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'as,bn,brx,doi,gu,hi,kn,ks,gom,mai,ml,mni,mr,ne,or,pa,sa,sat,sd,ta,te,ur',
+                autoDisplay: false
+            }, 'google_translate_element');
+        }
+
+        function mountLangDropdownToBody() {
+            const dd = document.getElementById('langDropdown');
+            if (!dd || dd.parentElement === document.body) return;
+            document.body.appendChild(dd);
+        }
+
+        function applyThemeMode(mode) {
+            const dark = mode === 'dark';
+            document.body.classList.toggle('dark-mode', dark);
+            const label = document.getElementById('themeBtnLabel');
+            const icon = document.getElementById('themeBtnIcon');
+            if (label) label.textContent = dark ? 'Dark Mode' : 'Light Mode';
+            if (icon) icon.textContent = dark ? '🌙' : '☀️';
+        }
+
+        function toggleThemeMode() {
+            const isDark = document.body.classList.contains('dark-mode');
+            const nextMode = isDark ? 'light' : 'dark';
+            localStorage.setItem('fp_theme', nextMode);
+            applyThemeMode(nextMode);
+        }
+
+        function toggleLangDropdown() {
+            mountLangDropdownToBody();
+            const dd = document.getElementById('langDropdown');
+            if (!dd) return;
+            const opening = !dd.classList.contains('open');
+            dd.classList.toggle('open');
+            document.body.classList.toggle('lang-menu-open', opening);
+        }
+
+        function runLangTransition(durationMs = 2200) {
+            document.body.classList.add('lang-changing');
+            setTimeout(() => document.body.classList.remove('lang-changing'), durationMs);
+        }
+
+        function selectLang(code, nativeLabel, englishLabel, triggerEffect = true) {
+            // Update button label
+            document.getElementById('langBtnLabel').textContent = nativeLabel || englishLabel;
+            // Mark active
+            document.querySelectorAll('.lang-item').forEach(el => el.classList.remove('active'));
+            const active = document.querySelector('.lang-item[data-lang="' + code + '"]');
+            if (active) active.classList.add('active');
+            // Close dropdown
+            document.getElementById('langDropdown').classList.remove('open');
+            document.body.classList.remove('lang-menu-open');
+            // Save preference
+            localStorage.setItem('fp_lang', code);
+            localStorage.setItem('fp_lang_label', nativeLabel || englishLabel);
+            if (typeof refreshChatUiText === 'function') refreshChatUiText();
+
+            if (code === 'en') {
+                // Restore to English
+                const iframe = document.querySelector('.goog-te-banner-frame');
+                const restore = document.querySelector('.goog-te-menu-value span');
+                // Use cookie approach to reset
+                if (triggerEffect) runLangTransition(650);
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+                document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + location.hostname;
+                setTimeout(() => location.reload(), 180);
+                return;
+            }
+            if (triggerEffect) runLangTransition(2200);
+            // Apply Google Translate
+            const tryApply = (n) => {
+                const sel = document.querySelector('.goog-te-combo');
+                if (sel) {
+                    sel.value = code;
+                    sel.dispatchEvent(new Event('change'));
+                } else if (n > 0) {
+                    setTimeout(() => tryApply(n - 1), 400);
+                }
+            };
+            tryApply(20);
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('langSwitcherWrap');
+            const dd = document.getElementById('langDropdown');
+            if (dd && dd.contains(e.target)) {
+                if (e.target !== dd) return;
+                dd.classList.remove('open');
+                document.body.classList.remove('lang-menu-open');
+                return;
+            }
+            if (wrap && wrap.contains(e.target)) return;
+            {
+                if (dd) dd.classList.remove('open');
+                document.body.classList.remove('lang-menu-open');
+            }
+        });
+
+        // Restore saved language on page load
+        window.addEventListener('load', function() {
+            mountLangDropdownToBody();
+            const savedCode  = localStorage.getItem('fp_lang');
+            const savedLabel = localStorage.getItem('fp_lang_label');
+            if (typeof refreshChatUiText === 'function') refreshChatUiText();
+            if (savedCode && savedCode !== 'en') {
+                if (savedLabel) document.getElementById('langBtnLabel').textContent = savedLabel;
+                const active = document.querySelector('.lang-item[data-lang="' + savedCode + '"]');
+                if (active) { document.querySelectorAll('.lang-item').forEach(el => el.classList.remove('active')); active.classList.add('active'); }
+                setTimeout(() => selectLang(savedCode, savedLabel, savedLabel, false), 1800);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedTheme = localStorage.getItem('fp_theme') || 'light';
+            applyThemeMode(savedTheme);
+        });
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('ForestPredict SW registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
 </body>
-            </html>
+</html>
