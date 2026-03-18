@@ -1,41 +1,25 @@
 # Python
+
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
 *.pyd
-*.pyc
-.Python
-*.egg
-*.egg-info/
-dist/
-build/
-.eggs/
-
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
-
-# Database
 *.db
-*.sqlite
-*.sqlite3
 
-# Environment variables
+# Environment
+
 .env
 .env.*
 !.env.example
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+uploads/
+
+# Virtual env
+
+venv/
+.venv/
 
 # OS
+
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log

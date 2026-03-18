@@ -1,5 +1,7 @@
 import sys
 import io
+from dotenv import load_dotenv
+load_dotenv()
 try:
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -34,33 +36,105 @@ import math
 import requests
 from functools import wraps
 try:
-    from dotenv import load_dotenv
-except Exception:
-    load_dotenv = None
-try:
     import openpyxl
     EXCEL_AVAILABLE = True
 except ImportError:
     EXCEL_AVAILABLE = False
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(32)  # For session management
+
+
+def _clean_env(name, default=None, placeholders=None):
+    value = os.getenv(name)
+    if value is None:
+        return default
+    value = value.strip().strip('"').strip("'")
+    if placeholders and value in placeholders:
+        return default
+    return value or default
+
+
+app.secret_key = _clean_env("FLASK_SECRET_KEY", default='dev-secret-key')
+# For session management
 CORS(app)
 
-if load_dotenv:
-    load_dotenv()
+GROQ_API_KEY = _clean_env(
+    "GROQ_API_KEY",
+    default=None,
+    placeholders={"PUT_NEW_KEY_HERE", "your_groq_api_key_here", "YOUR_GROQ_API_KEY"}
+)
+GROQ_MODEL = _clean_env(
+    "GROQ_MODEL",
+    default='llama-3.3-70b-versatile',
+    placeholders={"PUT_MODEL_HERE", "your_groq_model_here", "YOUR_GROQ_MODEL"}
+)
 
 
-def _get_groq_api_key() -> str:
-    return (
-        os.getenv('GROQ_API_KEY', '').strip()
-        or os.getenv('GROQ_API_TOKEN', '').strip()
+def _get_groq_config():
+    load_dotenv(override=True)
+    api_key = _clean_env(
+        "GROQ_API_KEY",
+        default=None,
+        placeholders={"PUT_NEW_KEY_HERE", "your_groq_api_key_here", "YOUR_GROQ_API_KEY"}
     )
+    model = _clean_env(
+        "GROQ_MODEL",
+        default='llama-3.3-70b-versatile',
+        placeholders={"PUT_MODEL_HERE", "your_groq_model_here", "YOUR_GROQ_MODEL"}
+    )
+    return api_key, model
 
+CHAT_LANGUAGE_CODES = {
+    'en': 'English',
+    'as': 'Assamese',
+    'bn': 'Bengali',
+    'brx': 'Bodo',
+    'doi': 'Dogri',
+    'gu': 'Gujarati',
+    'hi': 'Hindi',
+    'kn': 'Kannada',
+    'ks': 'Kashmiri',
+    'gom': 'Konkani',
+    'mai': 'Maithili',
+    'ml': 'Malayalam',
+    'mni': 'Manipuri',
+    'mr': 'Marathi',
+    'ne': 'Nepali',
+    'or': 'Odia',
+    'pa': 'Punjabi',
+    'sa': 'Sanskrit',
+    'sat': 'Santali',
+    'sd': 'Sindhi',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+    'ur': 'Urdu'
+}
 
-GROQ_API_KEY = _get_groq_api_key()
-GROQ_MODEL = 'llama-3.3-70b-versatile'
-CHAT_LANGUAGE_CODES = {'hi': 'Hindi', 'en': 'English'}
+CHAT_LANGUAGE_ALIASES = {
+    'english': 'en', 'en': 'en',
+    'assamese': 'as', 'অসমীয়া': 'as', 'as': 'as',
+    'bengali': 'bn', 'bangla': 'bn', 'বাংলা': 'bn', 'bn': 'bn',
+    'bodo': 'brx', 'बड़ो': 'brx', 'brx': 'brx',
+    'dogri': 'doi', 'डोगरी': 'doi', 'doi': 'doi',
+    'gujarati': 'gu', 'ગુજરાતી': 'gu', 'gu': 'gu',
+    'hindi': 'hi', 'हिंदी': 'hi', 'hi': 'hi',
+    'kannada': 'kn', 'ಕನ್ನಡ': 'kn', 'kn': 'kn',
+    'kashmiri': 'ks', 'کٲشُر': 'ks', 'ks': 'ks',
+    'konkani': 'gom', 'कोंकणी': 'gom', 'gom': 'gom',
+    'maithili': 'mai', 'मैथिली': 'mai', 'mai': 'mai',
+    'malayalam': 'ml', 'മലയാളം': 'ml', 'ml': 'ml',
+    'manipuri': 'mni', 'meitei': 'mni', 'মেইতেই': 'mni', 'mni': 'mni',
+    'marathi': 'mr', 'मराठी': 'mr', 'mr': 'mr',
+    'nepali': 'ne', 'नेपाली': 'ne', 'ne': 'ne',
+    'odia': 'or', 'oriya': 'or', 'ଓଡ଼ିଆ': 'or', 'or': 'or',
+    'punjabi': 'pa', 'ਪੰਜਾਬੀ': 'pa', 'pa': 'pa',
+    'sanskrit': 'sa', 'संस्कृतम्': 'sa', 'sa': 'sa',
+    'santali': 'sat', 'ᱥᱟᱱᱛᱟᱲᱤ': 'sat', 'sat': 'sat',
+    'sindhi': 'sd', 'سنڌي': 'sd', 'sd': 'sd',
+    'tamil': 'ta', 'தமிழ்': 'ta', 'ta': 'ta',
+    'telugu': 'te', 'తెలుగు': 'te', 'te': 'te',
+    'urdu': 'ur', 'اردو': 'ur', 'ur': 'ur'
+}
 
 
 def _resolve_chat_language(preferred_language, preferred_label, message):
@@ -71,13 +145,17 @@ def _resolve_chat_language(preferred_language, preferred_label, message):
     if code in CHAT_LANGUAGE_CODES:
         return code, CHAT_LANGUAGE_CODES[code]
 
-    if label in {'hindi', 'हिंदी', 'hi'}:
-        return 'hi', CHAT_LANGUAGE_CODES['hi']
-    if label in {'english', 'अंग्रेजी', 'en'}:
-        return 'en', CHAT_LANGUAGE_CODES['en']
+    aliased = CHAT_LANGUAGE_ALIASES.get(label)
+    if aliased in CHAT_LANGUAGE_CODES:
+        return aliased, CHAT_LANGUAGE_CODES[aliased]
 
-    if re.search(r'\b(hi|hindi|हिंदी)\b', message_text, re.IGNORECASE):
-        return 'hi', CHAT_LANGUAGE_CODES['hi']
+    for alias, alias_code in CHAT_LANGUAGE_ALIASES.items():
+        if not alias:
+            continue
+        if re.search(rf'\b{re.escape(alias)}\b', message_text, re.IGNORECASE):
+            return alias_code, CHAT_LANGUAGE_CODES[alias_code]
+        if any(ord(ch) > 127 for ch in alias) and alias in message_text:
+            return alias_code, CHAT_LANGUAGE_CODES[alias_code]
 
     return 'en', CHAT_LANGUAGE_CODES['en']
 
@@ -649,7 +727,8 @@ def admin_login():
         password = data.get('password')
         
         # Hardcoded admin credentials
-        if username == 'admin' and password == 'Harshdeep*123':
+        
+        if username == os.getenv("ADMIN_USERNAME") and password == os.getenv("ADMIN_PASSWORD"):
             
             connection = get_db_connection()
             if connection:
@@ -3093,13 +3172,13 @@ def _extract_groq_text(payload):
 
 def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
     """Call Groq chat completion API and return (text_or_none, error_or_none)."""
-    api_key = _get_groq_api_key()
-    if not api_key:
+    groq_api_key, groq_model = _get_groq_config()
+    if not groq_api_key:
         return None, 'Groq API key not configured'
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     payload = {
-        "model": GROQ_MODEL,
+        "model": groq_model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens
@@ -3109,14 +3188,17 @@ def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
         response = requests.post(
             url,
             headers={
-                "Authorization": f"Bearer {api_key}",
+                "Authorization": f"Bearer {groq_api_key}",
                 "Content-Type": "application/json"
             },
             json=payload,
             timeout=35
         )
         if response.status_code != 200:
-            return None, f"Groq API error ({response.status_code})"
+            details = (response.text or '').strip()
+            if len(details) > 300:
+                details = details[:300] + '...'
+            return None, f"Groq API error ({response.status_code}): {details}"
         data = response.json()
         text = _extract_groq_text(data)
         if not text:
@@ -3128,7 +3210,8 @@ def _call_groq_chat(messages, temperature=0.6, max_tokens=1024):
 
 def _generate_groq_reply(user_id, user_message, mode='message', preferred_language=None, preferred_label=None):
     """Generate Groq assistant response. Returns (text_or_none, error_or_none)."""
-    if not _get_groq_api_key():
+    groq_api_key, _ = _get_groq_config()
+    if not groq_api_key:
         return None, 'Groq API key not configured'
 
     recent_turns = _get_recent_chat_context(user_id, limit=10)
@@ -3141,7 +3224,7 @@ def _generate_groq_reply(user_id, user_message, mode='message', preferred_langua
     history_text = '\n'.join(history_lines[-10:]) if history_lines else '(no prior context)'
 
     mode_hint = 'voice call mode' if mode == 'call' else 'text message mode'
-    supported_languages = 'Hindi, English'
+    supported_languages = ', '.join(CHAT_LANGUAGE_CODES.values())
     preferred_language = (preferred_language or '').strip().lower()
     preferred_label = (preferred_label or '').strip()
     if preferred_language not in CHAT_LANGUAGE_CODES:
@@ -3164,10 +3247,10 @@ def _generate_groq_reply(user_id, user_message, mode='message', preferred_langua
         "You are Forest AI Assistant in the Forest Prediction web app.\n"
         "Rules:\n"
         "1) Always reply ONLY in the user's selected language from the UI.\n"
-        "2) Only two languages are allowed: Hindi and English.\n"
+        "2) Use only one language per reply, based on selected language.\n"
         "3) Use natural grammar and common words used by native speakers.\n"
         "4) Never mix languages in one sentence.\n"
-        "5) If selected language is Hindi, answer fully in Hindi; if English, fully in English.\n"
+        "5) If selected language is unavailable, fallback to English.\n"
         f"6) Supported languages: {supported_languages}.\n"
         "7) Reply only to what user asked. Do not add unrelated details unless requested.\n"
         f"8) Current interaction mode: {mode_hint}.\n\n"
@@ -3191,7 +3274,7 @@ def _generate_groq_reply(user_id, user_message, mode='message', preferred_langua
     if err or not text:
         return None, err or 'No response text from Groq'
 
-    if preferred_name and preferred_language in ('hi', 'en'):
+    if preferred_name and preferred_language in CHAT_LANGUAGE_CODES:
         rewrite_prompt = (
             f"Rewrite the following answer strictly in {preferred_name} only. "
             "Do not use any other language. Keep same meaning and concise style.\n\n"
